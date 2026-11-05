@@ -57,13 +57,15 @@ Why both: in evals, a model answered a 2026 Roth question with $7,000 (the 2025 
 
 ### Evals
 
+Production runs **Nova Micro**: it tied Nova Lite on the live suite at about a third of the cost. The decision rule (ship the cheaper model only on a tie) was set before the final run. The model is switchable with `ASSISTANT_MODEL_ID`.
+
 - `npm run eval` (CI gate, every push): 33 calculator cases and 14 provenance cases, 100% required.
 - `npm run eval:assistant -- --base https://pikalo.org` (live): 11 end-to-end questions covering tool use, retrieval facts, out-of-scope, prompt injection and invented-penalty bait. Deterministic scoring, no model grading.
 
-| Model      | Live eval          | Cost per answer (approx.) |
-| ---------- | ------------------ | ------------------------- |
-| Nova Lite  | 11/11              | ~$0.001                   |
-| Nova Micro | see commit history | ~$0.0003                  |
+| Model                       | Live eval | Cost per answer (approx.) |
+| --------------------------- | --------- | ------------------------- |
+| Nova Lite                   | 11/11     | ~$0.001                   |
+| **Nova Micro (production)** | **11/11** | **~$0.0003**              |
 
 ## AWS pipeline (`infra/`)
 
