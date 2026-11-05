@@ -64,7 +64,9 @@ export function createAskHandler(deps: AskHandlerDeps) {
           questionChars: question.length,
           tools: r.toolCalls.map((c) => `${c.name}:${c.ok ? "ok" : "err"}`),
           citations: r.citations.length,
-          unsupported: r.unsupported.length,
+          // Model-invented numbers only (numbers from the question are always
+          // allowed), so this never echoes user data.
+          unsupported: r.unsupported.slice(0, 10),
           usage: r.usage,
           ms: now() - started,
         }),

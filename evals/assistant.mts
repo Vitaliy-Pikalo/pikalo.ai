@@ -38,8 +38,6 @@ const usage = { inputTokens: 0, outputTokens: 0 };
 
 async function run(question: string): Promise<AssistantOutput> {
   if (values.base) {
-    // The site rate-limits per IP; pace requests.
-    await new Promise((r) => setTimeout(r, 8_000));
     const res = await fetch(`${values.base}/api/ask`, {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -63,7 +61,9 @@ async function run(question: string): Promise<AssistantOutput> {
 const target = values.base ?? values.model;
 console.log(`Assistant evals → ${target} (${cases.length} cases)\n`);
 let passed = 0;
-for (const c of cases) {
+for (const [i, c] of cases.entries()) {
+  // The site rate-limits per IP; pace requests (not counted in timings).
+  if (values.base && i > 0) await new Promise((r) => setTimeout(r, 8_000));
   const started = Date.now();
   try {
     const out = await run(c.question);
