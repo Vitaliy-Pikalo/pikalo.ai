@@ -39,6 +39,9 @@ Hosted on Vercel. Every push to `main` deploys to production, and GitHub Actions
 | `SUPABASE_PUBLISHABLE_KEY` | Publishable key; the table's RLS allows insert-only |
 | `EMBED_URL`                | `EmbedUrl` output of the CDK stack                  |
 | `EMBED_SIGNING_SECRET`     | Value of the `EmbedSigningSecret` secret            |
+| `REVIEW_QUEUE_TOKEN`       | Shared token checked by `record_withheld_answer`    |
+| `SITE_URL`                 | Origin for magic-link redirects                     |
+| `ASSISTANT_MODEL_ID`       | Chat model (default Nova Micro)                     |
 
 ## How the assistant works
 
@@ -66,6 +69,13 @@ Production runs **Nova Micro**: it tied Nova Lite on the live suite at about a t
 | --------------------------- | --------- | ------------------------- |
 | Nova Lite                   | 11/11     | ~$0.001                   |
 | **Nova Micro (production)** | **11/11** | **~$0.0003**              |
+
+## Accounts and the review queue
+
+- **Sign-in:** Supabase Auth magic links (`/login`, PKCE). `proxy.ts` refreshes sessions only on `/review` and `/account`, so public pages stay static.
+- **Roles:** `profiles.role` is `user`, `reviewer` or `admin`. Users can read their own role and can't change it.
+- **Review queue** (`/review`, reviewers only): when a guard withholds an answer, `/api/ask` stores the question and draft, with SSNs, ITINs, A-numbers, account numbers and emails removed. It writes through `record_withheld_answer`, an insert-only RPC that checks a shared token inside the database, so the app holds no service-role key. Reviewers can change only status and note; the database stamps who reviewed and when. Rows are deleted after 90 days (pg_cron).
+- **RLS test:** `supabase/tests/review_queue_rls.sql` simulates anon, a user and a reviewer in a rolled-back transaction (15 checks).
 
 ## AWS pipeline (`infra/`)
 
