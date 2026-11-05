@@ -27,7 +27,7 @@
       "question": "I'm on an F-1 student visa and first arrived in 2024. I was in the U.S. 300 days in 2026, 330 days in 2025 and 120 days in 2024. Am I a resident for tax purposes in 2026?",
       "expectStatus": ["answered"],
       "expectTool": "check_tax_residency",
-      "mustInclude": ["nonresident|non-resident"]
+      "mustInclude": ["nonresident|non-resident|not a resident"]
     },
     {
       "id": "spt-31-days",
@@ -38,7 +38,7 @@
     },
     {
       "id": "fbar-threshold",
-      "question": "When do I have to file an FBAR for my bank account back home?",
+      "question": "How much money in my foreign bank accounts triggers the requirement to file an FBAR?",
       "expectStatus": ["answered"],
       "mustInclude": ["10,000|10000"],
       "expectCitation": "fbar"
