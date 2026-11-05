@@ -1,0 +1,507 @@
+{
+  "version": 1,
+  "description": "Hand-calculated cases. Each runs a real tool through the MCP server and checks the listed fields. Sources are the IRS rule the expected value comes from.",
+  "cases": [
+    {
+      "id": "res-01",
+      "question": "I'm on an H-1B and was in the U.S. 183 days in 2026, none before. Am I a resident?",
+      "tool": "check_tax_residency",
+      "args": {
+        "taxYear": 2026,
+        "status": "other",
+        "daysCurrent": 183,
+        "daysPrior1": 0,
+        "daysPrior2": 0
+      },
+      "expect": { "result": "resident", "weightedDays": 183 },
+      "source": "https://www.irs.gov/individuals/international-taxpayers/substantial-presence-test"
+    },
+    {
+      "id": "res-02",
+      "question": "120 days in each of 2024, 2025 and 2026 on a work visa. Resident?",
+      "tool": "check_tax_residency",
+      "args": {
+        "taxYear": 2026,
+        "status": "other",
+        "daysCurrent": 120,
+        "daysPrior1": 120,
+        "daysPrior2": 120
+      },
+      "expect": { "result": "nonresident", "weightedDays": 180 },
+      "source": "https://www.irs.gov/individuals/international-taxpayers/substantial-presence-test"
+    },
+    {
+      "id": "res-03",
+      "question": "122 days in each of the last three years on a work visa?",
+      "tool": "check_tax_residency",
+      "args": {
+        "taxYear": 2026,
+        "status": "other",
+        "daysCurrent": 122,
+        "daysPrior1": 122,
+        "daysPrior2": 122
+      },
+      "expect": { "result": "resident" },
+      "source": "https://www.irs.gov/individuals/international-taxpayers/substantial-presence-test"
+    },
+    {
+      "id": "res-04",
+      "question": "Only 30 days here in 2026 but all of 2024 and 2025. Resident for 2026?",
+      "tool": "check_tax_residency",
+      "args": {
+        "taxYear": 2026,
+        "status": "other",
+        "daysCurrent": 30,
+        "daysPrior1": 365,
+        "daysPrior2": 366
+      },
+      "expect": { "result": "nonresident" },
+      "source": "https://www.irs.gov/individuals/international-taxpayers/substantial-presence-test"
+    },
+    {
+      "id": "res-05",
+      "question": "F-1 student since 2022, here all year every year. Resident in 2026?",
+      "tool": "check_tax_residency",
+      "args": {
+        "taxYear": 2026,
+        "status": "student",
+        "firstYearInStatus": 2022,
+        "daysCurrent": 365,
+        "daysPrior1": 365,
+        "daysPrior2": 366
+      },
+      "expect": { "result": "nonresident", "weightedDays": 0 },
+      "source": "https://www.irs.gov/publications/p519"
+    },
+    {
+      "id": "res-06",
+      "question": "F-1 since 2021, 200 days in 2026. Resident?",
+      "tool": "check_tax_residency",
+      "args": {
+        "taxYear": 2026,
+        "status": "student",
+        "firstYearInStatus": 2021,
+        "daysCurrent": 200,
+        "daysPrior1": 365,
+        "daysPrior2": 366
+      },
+      "expect": { "result": "resident", "weightedDays": 200 },
+      "source": "https://www.irs.gov/publications/p519"
+    },
+    {
+      "id": "res-07",
+      "question": "F-1 since 2021, 150 days in 2026. Resident?",
+      "tool": "check_tax_residency",
+      "args": {
+        "taxYear": 2026,
+        "status": "student",
+        "firstYearInStatus": 2021,
+        "daysCurrent": 150,
+        "daysPrior1": 365,
+        "daysPrior2": 366
+      },
+      "expect": { "result": "nonresident", "weightedDays": 150 },
+      "source": "https://www.irs.gov/publications/p519"
+    },
+    {
+      "id": "res-08",
+      "question": "J-1 researcher who arrived in 2025, here all of 2026. Resident?",
+      "tool": "check_tax_residency",
+      "args": {
+        "taxYear": 2026,
+        "status": "teacher_trainee",
+        "firstYearInStatus": 2025,
+        "daysCurrent": 365,
+        "daysPrior1": 200,
+        "daysPrior2": 0
+      },
+      "expect": { "result": "nonresident" },
+      "source": "https://www.irs.gov/publications/p519"
+    },
+    {
+      "id": "res-09",
+      "question": "J-1 researcher since 2024, 200 days in 2026. Resident?",
+      "tool": "check_tax_residency",
+      "args": {
+        "taxYear": 2026,
+        "status": "teacher_trainee",
+        "firstYearInStatus": 2024,
+        "daysCurrent": 200,
+        "daysPrior1": 365,
+        "daysPrior2": 200
+      },
+      "expect": { "result": "resident", "weightedDays": 200 },
+      "source": "https://www.irs.gov/publications/p519"
+    },
+    {
+      "id": "res-10",
+      "question": "I got my green card this year. Am I a resident?",
+      "tool": "check_tax_residency",
+      "args": {
+        "taxYear": 2026,
+        "status": "green_card",
+        "daysCurrent": 100,
+        "daysPrior1": 0,
+        "daysPrior2": 0
+      },
+      "expect": { "result": "resident", "test": "green_card" },
+      "source": "https://www.irs.gov/publications/p519"
+    },
+    {
+      "id": "res-11",
+      "question": "I switched from F-1 to H-1B in October. Resident?",
+      "tool": "check_tax_residency",
+      "args": {
+        "taxYear": 2026,
+        "status": "other",
+        "statusChanged": true,
+        "daysCurrent": 365,
+        "daysPrior1": 365,
+        "daysPrior2": 366
+      },
+      "expect": { "result": "needs_review" },
+      "source": "https://www.irs.gov/publications/p519"
+    },
+    {
+      "id": "res-12",
+      "question": "Work visa: 150 days in 2026, 200 in 2025. Resident, and anything else?",
+      "tool": "check_tax_residency",
+      "args": {
+        "taxYear": 2026,
+        "status": "other",
+        "daysCurrent": 150,
+        "daysPrior1": 200,
+        "daysPrior2": 0
+      },
+      "expect": { "result": "resident", "flags.code": "closer_connection" },
+      "source": "https://www.irs.gov/publications/p519"
+    },
+    {
+      "id": "res-13",
+      "question": "J-1 teacher paid by my home university since 2023. Exempt in 2026?",
+      "tool": "check_tax_residency",
+      "args": {
+        "taxYear": 2026,
+        "status": "teacher_trainee",
+        "firstYearInStatus": 2023,
+        "foreignEmployer": true,
+        "daysCurrent": 300,
+        "daysPrior1": 300,
+        "daysPrior2": 300
+      },
+      "expect": { "result": "nonresident", "exemptYears.current": true },
+      "source": "https://www.irs.gov/publications/p519"
+    },
+    {
+      "id": "fica-01",
+      "question": "F-1 on OPT, second year here. W-2 shows $2,976 Social Security and $696 Medicare. Owed anything?",
+      "tool": "check_fica_refund",
+      "args": {
+        "taxYear": 2026,
+        "visa": "f1",
+        "firstYearInStatus": 2025,
+        "job": "opt",
+        "wages": 48000,
+        "socialSecurityWithheld": 2976,
+        "medicareWithheld": 696
+      },
+      "expect": { "result": "exempt", "refundEstimate": 3672 },
+      "source": "https://www.irs.gov/individuals/international-taxpayers/foreign-student-liability-for-social-security-and-medicare-taxes"
+    },
+    {
+      "id": "fica-02",
+      "question": "F-1 freshman with a campus dining job; $620 Social Security and $145 Medicare withheld.",
+      "tool": "check_fica_refund",
+      "args": {
+        "taxYear": 2026,
+        "visa": "f1",
+        "firstYearInStatus": 2026,
+        "job": "on_campus",
+        "wages": 10000,
+        "socialSecurityWithheld": 620,
+        "medicareWithheld": 145
+      },
+      "expect": { "result": "exempt", "refundEstimate": 765 },
+      "source": "https://www.irs.gov/individuals/international-taxpayers/foreign-student-liability-for-social-security-and-medicare-taxes"
+    },
+    {
+      "id": "fica-03",
+      "question": "F-1 since 2021 on OPT in 2026. Can I get FICA back?",
+      "tool": "check_fica_refund",
+      "args": {
+        "taxYear": 2026,
+        "visa": "f1",
+        "firstYearInStatus": 2021,
+        "job": "opt",
+        "wages": 60000,
+        "socialSecurityWithheld": 3720,
+        "medicareWithheld": 870
+      },
+      "expect": { "result": "not_exempt", "refundEstimate": 0 },
+      "source": "https://www.irs.gov/individuals/international-taxpayers/foreign-student-liability-for-social-security-and-medicare-taxes"
+    },
+    {
+      "id": "fica-04",
+      "question": "I'm on an F-2 and work part time. Is FICA withheld wrongly?",
+      "tool": "check_fica_refund",
+      "args": {
+        "taxYear": 2026,
+        "visa": "dependent",
+        "firstYearInStatus": 2025,
+        "job": "on_campus",
+        "wages": 5000,
+        "socialSecurityWithheld": 310,
+        "medicareWithheld": 72.5
+      },
+      "expect": { "result": "not_exempt", "refundEstimate": 0 },
+      "source": "https://www.irs.gov/individuals/international-taxpayers/foreign-student-liability-for-social-security-and-medicare-taxes"
+    },
+    {
+      "id": "fica-05",
+      "question": "H-1B employee: can I get Social Security tax back?",
+      "tool": "check_fica_refund",
+      "args": {
+        "taxYear": 2026,
+        "visa": "h1b_other",
+        "firstYearInStatus": 2025,
+        "job": "opt",
+        "wages": 90000,
+        "socialSecurityWithheld": 5580,
+        "medicareWithheld": 1305
+      },
+      "expect": { "result": "not_exempt" },
+      "source": "https://www.irs.gov/individuals/international-taxpayers/foreign-student-liability-for-social-security-and-medicare-taxes"
+    },
+    {
+      "id": "fica-06",
+      "question": "M-1 student doing a CPT internship. FICA exempt?",
+      "tool": "check_fica_refund",
+      "args": {
+        "taxYear": 2026,
+        "visa": "m1",
+        "firstYearInStatus": 2025,
+        "job": "cpt",
+        "wages": 8000,
+        "socialSecurityWithheld": 496,
+        "medicareWithheld": 116
+      },
+      "expect": { "result": "not_exempt" },
+      "source": "https://www.irs.gov/individuals/international-taxpayers/foreign-student-liability-for-social-security-and-medicare-taxes"
+    },
+    {
+      "id": "fica-07",
+      "question": "M-1 student in post-completion practical training with FICA withheld.",
+      "tool": "check_fica_refund",
+      "args": {
+        "taxYear": 2026,
+        "visa": "m1",
+        "firstYearInStatus": 2025,
+        "job": "opt",
+        "wages": 8000,
+        "socialSecurityWithheld": 496,
+        "medicareWithheld": 116
+      },
+      "expect": { "result": "exempt", "refundEstimate": 612 },
+      "source": "https://www.irs.gov/individuals/international-taxpayers/foreign-student-liability-for-social-security-and-medicare-taxes"
+    },
+    {
+      "id": "fica-08",
+      "question": "J-1 postdoc researcher with FICA withheld.",
+      "tool": "check_fica_refund",
+      "args": {
+        "taxYear": 2026,
+        "visa": "j1_scholar",
+        "firstYearInStatus": 2025,
+        "job": "on_campus",
+        "wages": 55000,
+        "socialSecurityWithheld": 3410,
+        "medicareWithheld": 797.5
+      },
+      "expect": { "result": "needs_review" },
+      "source": "https://www.irs.gov/individuals/international-taxpayers/foreign-student-liability-for-social-security-and-medicare-taxes"
+    },
+    {
+      "id": "fica-09",
+      "question": "F-1 TA, boxes 4 and 6 are empty. Anything to do?",
+      "tool": "check_fica_refund",
+      "args": {
+        "taxYear": 2026,
+        "visa": "f1",
+        "firstYearInStatus": 2024,
+        "job": "on_campus",
+        "wages": 12000,
+        "socialSecurityWithheld": 0,
+        "medicareWithheld": 0
+      },
+      "expect": { "result": "exempt", "refundEstimate": 0 },
+      "source": "https://www.irs.gov/individuals/international-taxpayers/foreign-student-liability-for-social-security-and-medicare-taxes"
+    },
+    {
+      "id": "fica-10",
+      "question": "My OPT ended and H-1B started in October. Refund?",
+      "tool": "check_fica_refund",
+      "args": {
+        "taxYear": 2026,
+        "visa": "f1",
+        "firstYearInStatus": 2023,
+        "job": "opt",
+        "statusChanged": true,
+        "wages": 70000,
+        "socialSecurityWithheld": 4340,
+        "medicareWithheld": 1015
+      },
+      "expect": { "result": "needs_review" },
+      "source": "https://www.irs.gov/individuals/international-taxpayers/foreign-student-liability-for-social-security-and-medicare-taxes"
+    },
+    {
+      "id": "roth-01",
+      "question": "Single, $60,000 salary. How much can I put in a Roth IRA for 2026?",
+      "tool": "roth_ira_limit",
+      "args": {
+        "taxYear": 2026,
+        "filingStatus": "single",
+        "age50OrOlder": false,
+        "taxableCompensation": 60000,
+        "modifiedAgi": 60000,
+        "otherIraContributions": 0
+      },
+      "expect": { "result": "eligible", "maxContribution": 7500 },
+      "source": "https://www.irs.gov/newsroom/401k-limit-increases-to-24500-for-2026-ira-limit-increases-to-7500"
+    },
+    {
+      "id": "roth-02",
+      "question": "Single, MAGI $160,500. Roth limit for 2026?",
+      "tool": "roth_ira_limit",
+      "args": {
+        "taxYear": 2026,
+        "filingStatus": "single",
+        "age50OrOlder": false,
+        "taxableCompensation": 160500,
+        "modifiedAgi": 160500,
+        "otherIraContributions": 0
+      },
+      "expect": { "result": "reduced", "maxContribution": 3750 },
+      "source": "https://www.irs.gov/publications/p590a"
+    },
+    {
+      "id": "roth-03",
+      "question": "I'm 52, single, $80,000. Roth limit?",
+      "tool": "roth_ira_limit",
+      "args": {
+        "taxYear": 2026,
+        "filingStatus": "single",
+        "age50OrOlder": true,
+        "taxableCompensation": 80000,
+        "modifiedAgi": 80000,
+        "otherIraContributions": 0
+      },
+      "expect": { "maxContribution": 8600 },
+      "source": "https://www.irs.gov/newsroom/401k-limit-increases-to-24500-for-2026-ira-limit-increases-to-7500"
+    },
+    {
+      "id": "roth-04",
+      "question": "Single with MAGI of $168,000. Can I contribute to a Roth?",
+      "tool": "roth_ira_limit",
+      "args": {
+        "taxYear": 2026,
+        "filingStatus": "single",
+        "age50OrOlder": false,
+        "taxableCompensation": 168000,
+        "modifiedAgi": 168000,
+        "otherIraContributions": 0
+      },
+      "expect": { "result": "over_income", "maxContribution": 0 },
+      "source": "https://www.irs.gov/newsroom/401k-limit-increases-to-24500-for-2026-ira-limit-increases-to-7500"
+    },
+    {
+      "id": "roth-05",
+      "question": "Married filing jointly, MAGI $247,000, I earn $120,000.",
+      "tool": "roth_ira_limit",
+      "args": {
+        "taxYear": 2026,
+        "filingStatus": "married_joint",
+        "age50OrOlder": false,
+        "taxableCompensation": 120000,
+        "modifiedAgi": 247000,
+        "otherIraContributions": 0
+      },
+      "expect": { "maxContribution": 3750 },
+      "source": "https://www.irs.gov/publications/p590a"
+    },
+    {
+      "id": "roth-06",
+      "question": "Married filing separately, lived with my spouse, I earned $5,000.",
+      "tool": "roth_ira_limit",
+      "args": {
+        "taxYear": 2026,
+        "filingStatus": "married_separate",
+        "age50OrOlder": false,
+        "taxableCompensation": 5000,
+        "modifiedAgi": 5000,
+        "otherIraContributions": 0
+      },
+      "expect": { "maxContribution": 2500 },
+      "source": "https://www.irs.gov/publications/p590a"
+    },
+    {
+      "id": "roth-07",
+      "question": "Single, earned $3,000 but MAGI is $160,500 from investments.",
+      "tool": "roth_ira_limit",
+      "args": {
+        "taxYear": 2026,
+        "filingStatus": "single",
+        "age50OrOlder": false,
+        "taxableCompensation": 3000,
+        "modifiedAgi": 160500,
+        "otherIraContributions": 0
+      },
+      "expect": { "maxContribution": 1500 },
+      "source": "https://www.irs.gov/publications/p590a"
+    },
+    {
+      "id": "roth-08",
+      "question": "My only income is a treaty-exempt stipend. Can I open a Roth?",
+      "tool": "roth_ira_limit",
+      "args": {
+        "taxYear": 2026,
+        "filingStatus": "single",
+        "age50OrOlder": false,
+        "taxableCompensation": 0,
+        "modifiedAgi": 0,
+        "otherIraContributions": 0
+      },
+      "expect": { "result": "no_compensation", "maxContribution": 0 },
+      "source": "https://www.irs.gov/publications/p590a"
+    },
+    {
+      "id": "roth-09",
+      "question": "Already put $2,000 in a traditional IRA, salary $60,000. Roth room left?",
+      "tool": "roth_ira_limit",
+      "args": {
+        "taxYear": 2026,
+        "filingStatus": "single",
+        "age50OrOlder": false,
+        "taxableCompensation": 60000,
+        "modifiedAgi": 60000,
+        "otherIraContributions": 2000
+      },
+      "expect": { "maxContribution": 5500 },
+      "source": "https://www.irs.gov/publications/p590a"
+    },
+    {
+      "id": "roth-10",
+      "question": "Single, MAGI $167,900. Anything allowed?",
+      "tool": "roth_ira_limit",
+      "args": {
+        "taxYear": 2026,
+        "filingStatus": "single",
+        "age50OrOlder": false,
+        "taxableCompensation": 167900,
+        "modifiedAgi": 167900,
+        "otherIraContributions": 0
+      },
+      "expect": { "maxContribution": 200 },
+      "source": "https://www.irs.gov/publications/p590a"
+    }
+  ]
+}

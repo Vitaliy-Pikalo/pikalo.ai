@@ -10,7 +10,8 @@
     "test": "vitest run",
     "format": "prettier --write .",
     "typecheck": "tsc --noEmit",
-    "mcp": "tsx mcp/stdio.mts"
+    "mcp": "tsx mcp/stdio.mts",
+    "eval": "tsx evals/run.mts"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.32.2",
