@@ -66,11 +66,7 @@ export interface Source {
 }
 
 export type ResidencyResult =
-  | "citizen"
-  | "resident"
-  | "nonresident"
-  | "needs_review"
-  | "invalid";
+  "citizen" | "resident" | "nonresident" | "needs_review" | "invalid";
 
 export interface ResidencyOutput {
   result: ResidencyResult;
@@ -278,7 +274,10 @@ export function checkResidency(input: ResidencyInput): ResidencyOutput {
     });
   }
 
-  if ((status === "teacher_trainee" || status === "student") && input.priorExemptHistory) {
+  if (
+    (status === "teacher_trainee" || status === "student") &&
+    input.priorExemptHistory
+  ) {
     out.flags.push({
       code: "prior_exempt_history",
       message:

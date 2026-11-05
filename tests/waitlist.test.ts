@@ -5,7 +5,11 @@ const okStore = (): WaitlistStore & { insert: ReturnType<typeof vi.fn> } => ({
   insert: vi.fn().mockResolvedValue({ error: null }),
 });
 
-const valid = { email: "  Ana@Example.COM ", segment: "international_student", school: "Penn State" };
+const valid = {
+  email: "  Ana@Example.COM ",
+  segment: "international_student",
+  school: "Penn State",
+};
 
 describe("joinWaitlist", () => {
   it("normalizes email and inserts", async () => {

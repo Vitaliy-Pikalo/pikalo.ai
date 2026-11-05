@@ -10,8 +10,12 @@ function getStore() {
   const supabase = createClient(url, key, { auth: { persistSession: false } });
   return {
     // RLS allows anon INSERT only (no SELECT), so don't request the row back.
-    insert: async (row: { email: string; segment: string; school: string | null; source: string }) =>
-      supabase.from("waitlist").insert(row),
+    insert: async (row: {
+      email: string;
+      segment: string;
+      school: string | null;
+      source: string;
+    }) => supabase.from("waitlist").insert(row),
   };
 }
 
