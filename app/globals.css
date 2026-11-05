@@ -74,3 +74,19 @@ body {
     animation-duration: 0.01ms !important;
   }
 }
+
+/* Print only the refund packet when "Print packet" is used. */
+@media print {
+  body.printing-packet * {
+    visibility: hidden;
+  }
+  body.printing-packet #refund-packet,
+  body.printing-packet #refund-packet * {
+    visibility: visible;
+  }
+  body.printing-packet #refund-packet {
+    position: absolute;
+    inset: 0 0 auto 0;
+    padding: 0 1rem;
+  }
+}
