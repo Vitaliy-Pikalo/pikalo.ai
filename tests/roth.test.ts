@@ -103,11 +103,37 @@ describe("compensation cap", () => {
     expect(r.limitedBy).toBe("other_contributions");
   });
 
-  it("traditional contributions also come out of a reduced limit", () => {
-    // reduced limit 3,750 − 1,000 traditional = 2,750
+  it("traditional contributions come out of line 6, not the reduced amount", () => {
+    // line 8 = 3,750; line 10 = 7,500 − 1,000 = 6,500 → lesser is 3,750
+    const r = run({ modifiedAgi: 160_500, otherIraContributions: 1_000 });
+    expect(r.maxContribution).toBe(3_750);
+    expect(r.limitedBy).toBe("income");
+  });
+
+  it("phase-out starts from the lesser of limit and compensation", () => {
+    // line 6 = 3,000; half phased out → 1,500
     expect(
-      run({ modifiedAgi: 160_500, otherIraContributions: 1_000 }).maxContribution,
-    ).toBe(2_750);
+      run({ taxableCompensation: 3_000, modifiedAgi: 160_500 }).maxContribution,
+    ).toBe(1_500);
+  });
+
+  it("married filing jointly can use the spouse's compensation", () => {
+    const r = run({
+      filingStatus: "married_joint",
+      taxableCompensation: 2_000,
+      spouseCompensation: 80_000,
+      modifiedAgi: 82_000,
+    });
+    expect(r.maxContribution).toBe(7_500);
+  });
+
+  it("ignores spouse compensation unless filing jointly", () => {
+    const r = run({
+      taxableCompensation: 2_000,
+      spouseCompensation: 80_000,
+      modifiedAgi: 2_000,
+    });
+    expect(r.maxContribution).toBe(2_000);
   });
 });
 

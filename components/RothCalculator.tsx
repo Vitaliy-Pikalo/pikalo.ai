@@ -31,6 +31,7 @@ export default function RothCalculator() {
   const [magiTouched, setMagiTouched] = useState(false);
   const [other, setOther] = useState("");
   const [apart, setApart] = useState(false);
+  const [spouseComp, setSpouseComp] = useState("");
 
   const compValue = parseMoney(comp);
   const output = checkRoth({
@@ -42,6 +43,7 @@ export default function RothCalculator() {
     modifiedAgi: magiTouched ? parseMoney(magi) : compValue,
     otherIraContributions: parseMoney(other),
     livedApartAllYear: status === "married_separate" ? apart : undefined,
+    spouseCompensation: status === "married_joint" ? parseMoney(spouseComp) : undefined,
   });
 
   return (
@@ -49,8 +51,8 @@ export default function RothCalculator() {
       <form className="space-y-6" onSubmit={(e) => e.preventDefault()}>
         <MoneyField
           id={`${id}-comp`}
-          label="2026 taxable U.S. wages"
-          hint="Wages and self-employment income. Leave out wages a tax treaty exempts."
+          label="Your 2026 taxable compensation"
+          hint="Wages, self-employment income and taxable non-tuition stipends. Leave out wages a tax treaty exempts."
           value={comp}
           onChange={setComp}
         />
@@ -72,6 +74,15 @@ export default function RothCalculator() {
             separately.
           </span>
         </label>
+        {status === "married_joint" && (
+          <MoneyField
+            id={`${id}-spouse`}
+            label="Spouse's 2026 taxable compensation"
+            hint="Minus anything your spouse puts in their own IRAs."
+            value={spouseComp}
+            onChange={setSpouseComp}
+          />
+        )}
         {status === "married_separate" && (
           <Checkbox checked={apart} onChange={setApart}>
             I lived apart from my spouse for all of 2026
@@ -100,7 +111,9 @@ export default function RothCalculator() {
 
       <section className="lg:sticky lg:top-6 lg:self-start">
         {comp.trim() === "" ? (
-          <Placeholder>Enter your 2026 wages to see how much you can put in.</Placeholder>
+          <Placeholder>
+            Enter your 2026 compensation to see how much you can put in.
+          </Placeholder>
         ) : (
           <RothResultView output={output} />
         )}

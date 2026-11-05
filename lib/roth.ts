@@ -3,13 +3,12 @@
  *
  * Figures: IRS news release IR-2025-111 ("401(k) limit increases to $24,500
  * for 2026, IRA limit increases to $7,500").
- * Method: IRS Publication 590-A, "Can You Contribute to a Roth IRA?" and its
- * reduced-contribution worksheet:
- *   reduction = limit × (MAGI − lower) / (upper − lower)
- *   allowed   = limit − reduction, rounded UP to the next $10,
- *               and at least $200 if it's more than $0.
- * Contributions also can't exceed taxable compensation, and every IRA
- * contribution (traditional + Roth) shares one annual limit.
+ * Method: IRS Publication 590-A, Worksheet 2-2 (reduced Roth contribution):
+ *   line 6  = lesser of the contribution limit and taxable compensation
+ *   line 8  = line 6 − line 6 × (MAGI − lower) / (upper − lower),
+ *             rounded UP to the next $10; at least $200 if more than $0
+ *   line 10 = line 6 − traditional IRA contributions for the year
+ *   limit   = lesser of line 8 and line 10
  *
  * Pub 590-A: compensation excludes amounts you exclude from income, so wages
  * exempt under a tax treaty don't count.
@@ -46,6 +45,11 @@ export interface RothInput {
   otherIraContributions: number;
   /** Married filing separately but lived apart from your spouse all year. */
   livedApartAllYear?: boolean;
+  /**
+   * Married filing jointly: spouse's taxable compensation (minus the spouse's
+   * own IRA contributions), which can also support your contribution.
+   */
+  spouseCompensation?: number;
 }
 
 export type RothResult =
@@ -75,10 +79,10 @@ export const ROTH_SOURCES: Source[] = [
 ];
 
 export const ROTH_NOTES = [
-  "On a visa, only taxable U.S. compensation counts. Wages exempt under a tax treaty, scholarships that pay only tuition, and investment income don't.",
-  "Nonresident aliens aren't barred from Roth IRAs, but many brokerages require an SSN and U.S. address to open one.",
+  "Only compensation you pay tax on counts. Wages a tax treaty exempts don't count, and neither does investment income. Taxable fellowship or stipend payments (not for tuition) do count.",
+  "IRS rules tie eligibility to taxable compensation, not citizenship, but many brokerages require an SSN and a U.S. address to open an account.",
   "Withdrawals after you leave the U.S. can be taxed differently, and your home country may tax the account. Check before contributing if you might move back.",
-  "Contributions for 2026 are allowed until the April 2027 tax deadline.",
+  "Contributions for 2026 are allowed until April 15, 2027. Filing extensions don't extend this.",
 ];
 
 const roundUpTo10 = (n: number) => Math.ceil(n / 10) * 10;
@@ -125,10 +129,20 @@ export function checkRoth(input: RothInput): RothOutput {
   const limit = ROTH_2026.limit + (input.age50OrOlder ? ROTH_2026.catchUp : 0);
   out.baseLimit = limit;
 
-  if (input.taxableCompensation === 0) {
+  const spouse =
+    input.filingStatus === "married_joint"
+      ? Math.max(0, input.spouseCompensation ?? 0)
+      : 0;
+  if (!Number.isFinite(spouse)) {
+    out.reasons.push("Enter dollar amounts of 0 or more.");
+    return out;
+  }
+  const compensation = input.taxableCompensation + spouse;
+
+  if (compensation === 0) {
     out.result = "no_compensation";
     out.reasons.push(
-      "You need taxable U.S. compensation (wages or self-employment income) to contribute. Wages exempt under a tax treaty don't count.",
+      "You need taxable compensation (wages or self-employment income) to contribute. Wages exempt under a tax treaty don't count.",
     );
     return out;
   }
@@ -138,18 +152,19 @@ export function checkRoth(input: RothInput): RothOutput {
   const [lower, upper] = range;
   const magi = input.modifiedAgi;
 
-  let incomeLimit: number;
+  // Worksheet 2-2.
+  const line6 = Math.min(limit, compensation);
+  let line8: number;
   if (magi >= upper) {
-    incomeLimit = 0;
+    line8 = 0;
   } else if (magi <= lower) {
-    incomeLimit = limit;
+    line8 = line6;
   } else {
-    const reduction = (limit * (magi - lower)) / (upper - lower);
-    incomeLimit = roundUpTo10(limit - reduction);
-    if (incomeLimit > 0 && incomeLimit < 200) incomeLimit = 200;
+    line8 = roundUpTo10(line6 - (line6 * (magi - lower)) / (upper - lower));
+    if (line8 > 0 && line8 < 200) line8 = 200;
   }
 
-  if (incomeLimit === 0) {
+  if (line8 === 0) {
     out.result = "over_income";
     out.reasons.push(
       `Your modified AGI of ${usd(magi)} is at or above ${usd(upper)}, the 2026 cutoff for your filing status, so you can't contribute directly to a Roth IRA this year.`,
@@ -157,18 +172,15 @@ export function checkRoth(input: RothInput): RothOutput {
     return out;
   }
 
-  // Traditional IRA contributions come out of whichever cap applies.
   const other = input.otherIraContributions;
-  const candidates: [number, RothOutput["limitedBy"]][] = [
-    [
-      Math.max(0, incomeLimit - other),
-      incomeLimit < limit ? "income" : "other_contributions",
-    ],
-    [Math.max(0, input.taxableCompensation - other), "compensation"],
-  ];
-  const [max, by] = candidates.reduce((a, b) => (b[0] < a[0] ? b : a));
+  const line10 = Math.max(0, line6 - other);
+  const max = Math.min(line8, line10);
   out.maxContribution = max;
-  out.limitedBy = max === limit ? "none" : by;
+
+  if (max === limit) out.limitedBy = "none";
+  else if (other > 0 && line10 <= line8) out.limitedBy = "other_contributions";
+  else if (line8 < line6) out.limitedBy = "income";
+  else out.limitedBy = "compensation";
   out.result = out.limitedBy === "none" ? "eligible" : "reduced";
 
   out.reasons.push(
@@ -176,7 +188,7 @@ export function checkRoth(input: RothInput): RothOutput {
       none: `You can contribute up to ${usd(max)} to a Roth IRA for 2026.`,
       income: `Your income is inside the ${usd(lower)}–${usd(upper)} phase-out range, so your limit drops to ${usd(max)}.`,
       compensation: `You can't contribute more than your taxable compensation, so your limit is ${usd(max)}.`,
-      other_contributions: `Traditional and Roth IRAs share one ${usd(limit)} limit. After the ${usd(input.otherIraContributions)} you already put in a traditional IRA, ${usd(max)} is left.`,
+      other_contributions: `Traditional and Roth IRAs share one limit. After the ${usd(other)} you already put in a traditional IRA, ${usd(max)} is left.`,
     }[out.limitedBy],
   );
   return out;
