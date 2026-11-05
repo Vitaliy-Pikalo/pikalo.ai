@@ -44,7 +44,7 @@ export interface FicaInput {
   /** First calendar year in the U.S. in this student status. */
   firstYearInStatus: number;
   job: FicaJob;
-  /** W-2 box 1 (or box 3/5 if you prefer); used only for a sanity check. */
+  /** W-2 box 3 (Social Security wages); used only for a sanity check. */
   wages: number;
   /** W-2 box 4. */
   socialSecurityWithheld: number;
@@ -80,7 +80,7 @@ export const FICA_SOURCES: Source[] = [
     url: "https://www.irs.gov/individuals/international-taxpayers/foreign-student-liability-for-social-security-and-medicare-taxes",
   },
   { title: "IRS Form 843", url: "https://www.irs.gov/forms-pubs/about-form-843" },
-  { title: "IRS Form 8316", url: "https://www.irs.gov/forms-pubs/about-form-8316" },
+  { title: "IRS Form 8316 (PDF)", url: "https://www.irs.gov/pub/irs-pdf/f8316.pdf" },
   RESIDENCY_SOURCES[0],
 ];
 
@@ -119,7 +119,7 @@ export function checkFica(input: FicaInput): FicaOutput {
   if (out.totalWithheld > expectedMax + 1) {
     out.flags.push({
       code: "withholding_above_rate",
-      message: `The amount withheld is more than 7.65% of the wages you entered. Double-check boxes 1, 4 and 6 on your W-2.`,
+      message: `The amount withheld is more than 7.65% of the Social Security wages you entered. Double-check boxes 3, 4 and 6 on your W-2.`,
     });
   }
 
@@ -160,7 +160,7 @@ export function checkFica(input: FicaInput): FicaOutput {
 
   out.flags.push({
     code: "status_assumption",
-    message: `This assumes you've been in student status since ${input.firstYearInStatus} and in the U.S. for part of every calendar year since. Confirm your status with the residency checker.`,
+    message: `This assumes you've been in student status since ${input.firstYearInStatus}, were in the U.S. for part of every calendar year since, and haven't chosen to be treated as a resident (for example, by filing jointly with a U.S. citizen spouse). Confirm your status with the residency checker.`,
   });
 
   if (!withinExemptYears) {
@@ -173,6 +173,14 @@ export function checkFica(input: FicaInput): FicaOutput {
       message:
         "Resident students can still be exempt on wages from their own school if they're enrolled at least half-time and the job is incidental to their studies (the student FICA exception). Off-campus jobs and OPT employers don't qualify.",
     });
+    return out;
+  }
+
+  if (input.visa === "m1" && (input.job === "on_campus" || input.job === "cpt")) {
+    out.result = "not_exempt";
+    out.reasons.push(
+      "M-1 students can generally only work in practical training after finishing their program, not on campus or in CPT. The exemption covers only work USCIS allows, so talk to your school's international office about this job.",
+    );
     return out;
   }
 
@@ -189,7 +197,7 @@ export function checkFica(input: FicaInput): FicaOutput {
     out.flags.push({
       code: "on_campus_hours",
       message:
-        "On-campus work is covered for up to 20 hours a week during school and 40 hours during breaks, which is the work USCIS allows.",
+        "On-campus work is covered for up to 20 hours a week while school is in session and 40 hours a week during summer vacation.",
     });
   }
   out.flags.push({
@@ -213,8 +221,9 @@ export function checkFica(input: FicaInput): FicaOutput {
     "Ask your employer's payroll office to refund the Social Security and Medicare tax withheld in error and correct your W-2. This is the fastest route.",
     "Ask payroll to stop withholding FICA on future paychecks.",
     "If the employer won't or can't refund all of it, file Form 843 (Claim for Refund) with Form 8316 and copies of your W-2, I-94, visa and I-20 or DS-2019 (plus your EAD card for OPT).",
-    "Attach a letter from your employer saying how much they refunded, or that they won't refund it.",
-    "Mail it to the IRS address in the Form 843 instructions. Keep copies of everything.",
+    "Attach a letter from your employer saying how much they refunded, or that they won't refund it. If you can't get one, attach your own signed statement explaining why.",
+    "Mail it to the IRS address in the Form 843 instructions, separately from your tax return. Keep copies of everything.",
+    "Refund claims have a time limit (generally 3 years), so don't wait.",
   ];
   return out;
 }

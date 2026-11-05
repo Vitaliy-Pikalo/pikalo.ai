@@ -35,7 +35,18 @@ describe("exempt nonresident students", () => {
 
   it("J-1 and M-1 students are covered too", () => {
     expect(run({ visa: "j1_student" }).result).toBe("exempt");
-    expect(run({ visa: "m1" }).result).toBe("exempt");
+    expect(run({ visa: "m1", job: "opt" }).result).toBe("exempt");
+  });
+
+  it("M-1 students can't use on-campus work or CPT", () => {
+    expect(run({ visa: "m1", job: "on_campus" }).result).toBe("not_exempt");
+    expect(run({ visa: "m1", job: "cpt" }).result).toBe("not_exempt");
+  });
+
+  it("links the Form 8316 PDF", () => {
+    expect(run({}).sources.map((x) => x.url)).toContain(
+      "https://www.irs.gov/pub/irs-pdf/f8316.pdf",
+    );
   });
 
   it("year 5 is still exempt; year 6 is not", () => {
