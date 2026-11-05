@@ -1,0 +1,76 @@
+@import "tailwindcss";
+
+:root {
+  color-scheme: light dark;
+  --ink: #16243a;
+  --paper: #f5f6f8;
+  --surface: #ffffff;
+  --slate: #5a6474;
+  --line: #d8dce2;
+  --field-line: #8a93a1;
+  --stamp: #2e6a4e;
+  --stamp-soft: #e3efe8;
+  --amber: #875a00;
+  --amber-soft: #fbf1dc;
+  --meter-1: #16243a;
+  --meter-2: #4f6585;
+  --meter-3: #9aabc2;
+  --focus: #2b6cd4;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink: #e7ebf1;
+    --paper: #0f1622;
+    --surface: #172031;
+    --slate: #9aa5b5;
+    --line: #2a3548;
+    --field-line: #6b7a90;
+    --stamp: #7cc3a0;
+    --stamp-soft: #18322a;
+    --amber: #e6b558;
+    --amber-soft: #33270f;
+    --meter-1: #e7ebf1;
+    --meter-2: #9fb2cc;
+    --meter-3: #566a86;
+    --focus: #79a8f2;
+  }
+}
+
+@theme inline {
+  --color-ink: var(--ink);
+  --color-paper: var(--paper);
+  --color-surface: var(--surface);
+  --color-slate: var(--slate);
+  --color-line: var(--line);
+  --color-field-line: var(--field-line);
+  --color-stamp: var(--stamp);
+  --color-stamp-soft: var(--stamp-soft);
+  --color-amber: var(--amber);
+  --color-amber-soft: var(--amber-soft);
+  --color-meter-1: var(--meter-1);
+  --color-meter-2: var(--meter-2);
+  --color-meter-3: var(--meter-3);
+  --font-sans: var(--font-public-sans), ui-sans-serif, system-ui, sans-serif;
+}
+
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-feature-settings: "tnum" 1;
+}
+
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}
