@@ -27,10 +27,16 @@ const SECRET_ARN = process.env.SECRET_ARN!;
 const MODEL_ID = process.env.BEDROCK_MODEL_ID ?? "amazon.titan-embed-text-v2:0";
 const USER_AGENT = "PikaloIngest/0.1 (+https://pikalo.org)";
 const UPSERT_BATCH = 50;
+const FETCH_TIMEOUT_MS = 30_000;
 
 async function supabaseConfig() {
   const res = await secrets.send(new GetSecretValueCommand({ SecretId: SECRET_ARN }));
-  const value = JSON.parse(res.SecretString ?? "{}");
+  let value: Record<string, unknown> = {};
+  try {
+    value = JSON.parse(res.SecretString ?? "{}");
+  } catch {
+    // fall through to the error below
+  }
   if (!value.SUPABASE_URL || !value.SUPABASE_SERVICE_ROLE_KEY) {
     throw new Error("Supabase secret is missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY");
   }
@@ -47,7 +53,10 @@ export async function handler() {
 
   const deps: IngestDeps = {
     async fetchHtml(url) {
-      const res = await fetch(url, { headers: { "User-Agent": USER_AGENT } });
+      const res = await fetch(url, {
+        headers: { "User-Agent": USER_AGENT },
+        signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+      });
       if (!res.ok) throw new Error(`GET ${url} → ${res.status}`);
       if (!(res.headers.get("content-type") ?? "").includes("text/html")) {
         throw new Error(`GET ${url} returned ${res.headers.get("content-type")}`);

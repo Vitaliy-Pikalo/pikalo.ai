@@ -51,12 +51,12 @@ describe("raw page archive", () => {
 });
 
 describe("ingest Lambda", () => {
-  it("runs on Node 22 arm64, one at a time", () => {
+  it("runs on Node 22 arm64 without reserved concurrency", () => {
     t.hasResourceProperties("AWS::Lambda::Function", {
       Runtime: "nodejs22.x",
       Architectures: ["arm64"],
       Timeout: 900,
-      ReservedConcurrentExecutions: 1,
+      ReservedConcurrentExecutions: Match.absent(),
       Environment: { Variables: Match.objectLike({ BEDROCK_MODEL_ID: EMBEDDING_MODEL_ID }) },
     });
   });
@@ -71,6 +71,20 @@ describe("ingest Lambda", () => {
     t.hasResourceProperties("AWS::CloudWatch::Alarm", {
       MetricName: "Errors",
       Threshold: 1,
+    });
+  });
+});
+
+describe("archive permissions", () => {
+  it("never lets the Lambda delete archived pages", () => {
+    const actions = JSON.stringify(t.findResources("AWS::IAM::Policy"));
+    expect(actions).not.toMatch(/s3:DeleteObject/);
+    expect(actions).toMatch(/s3:PutObject/);
+  });
+
+  it("seeds the secret as JSON so the Lambda fails with a clear message", () => {
+    t.hasResourceProperties("AWS::SecretsManager::Secret", {
+      GenerateSecretString: { SecretStringTemplate: "{}", GenerateStringKey: "placeholder" },
     });
   });
 });

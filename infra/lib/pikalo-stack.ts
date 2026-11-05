@@ -35,7 +35,8 @@ export interface PikaloStackProps extends StackProps {
  * - S3 archive of every IRS page version we ingested
  * - Weekly Lambda: fetch → chunk → embed (Bedrock Titan) → upsert to Supabase
  * - Vercel OIDC role that can only call the embedding model (query time)
- * - GitHub OIDC role that can only deploy this stack
+ * - GitHub OIDC role for `cdk deploy` from main. It can assume the CDK
+ *   bootstrap roles, which are broad by design, so treat it as admin-level.
  * No long-lived AWS keys anywhere.
  */
 export class PikaloStack extends Stack {
@@ -54,6 +55,8 @@ export class PikaloStack extends Stack {
     });
 
     const supabaseSecret = new secretsmanager.Secret(this, "SupabaseIngestSecret", {
+      // Placeholder JSON; the real values are pasted in after deploy.
+      generateSecretString: { secretStringTemplate: "{}", generateStringKey: "placeholder" },
       description:
         'Set to {"SUPABASE_URL":"...","SUPABASE_SERVICE_ROLE_KEY":"..."} in the console. Used only by the ingest Lambda.',
     });
@@ -69,8 +72,9 @@ export class PikaloStack extends Stack {
       runtime: lambda.Runtime.NODEJS_22_X,
       architecture: lambda.Architecture.ARM_64,
       memorySize: 512,
+      // No reserved concurrency: new accounts (limit 10) reject any reservation,
+      // and the single weekly rule already means one run at a time.
       timeout: Duration.minutes(15),
-      reservedConcurrentExecutions: 1,
       logGroup,
       environment: {
         BUCKET: bucket.bucketName,
@@ -88,7 +92,10 @@ export class PikaloStack extends Stack {
       },
     });
 
-    bucket.grantReadWrite(ingest);
+    // Read (incl. ListBucket, so a missing key is NoSuchKey not AccessDenied)
+    // and put. No delete: the archive is append-only.
+    bucket.grantRead(ingest);
+    bucket.grantPut(ingest);
     supabaseSecret.grantRead(ingest);
     ingest.addToRolePolicy(
       new iam.PolicyStatement({

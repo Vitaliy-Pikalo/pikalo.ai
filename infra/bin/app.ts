@@ -10,5 +10,6 @@ new PikaloStack(app, "Pikalo", {
   vercelTeamSlug: ctx("vercelTeamSlug"),
   vercelProject: ctx("vercelProject"),
   githubRepo: ctx("githubRepo"),
-  createGithubOidcProvider: ctx("createGithubOidcProvider") !== false,
+  // `-c key=false` arrives as the string "false".
+  createGithubOidcProvider: String(ctx("createGithubOidcProvider")) !== "false",
 });
