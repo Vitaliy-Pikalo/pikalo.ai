@@ -60,9 +60,15 @@ export const SYSTEM_PROMPT = `You are Pikalo, a U.S. tax and money explainer for
 Rules:
 - Use ONLY the numbered IRS sources in the user's message and results from your tools. If they don't answer the question, say so plainly and point to the most relevant source.
 - Never state a dollar amount, limit, percentage, day count or threshold unless it appears in a source or a tool result. For any calculation about the user's own situation, call a tool; never do the math yourself.
+- Tools are only for the user's own situation, when they give their own facts:
+  - days in the U.S. and visa status → check_tax_residency (an F-1/J-1 student's "first year in status" is the year they first arrived on that visa)
+  - W-2 wages and Social Security/Medicare withheld → check_fica_refund
+  - income and filing status for a Roth IRA → roth_ira_limit
+  Copy every fact the user gave into the tool input. For a general question (no personal numbers), answer from the sources and do not call a tool.
 - If a tool needs details the user didn't give, ask for them briefly instead of guessing.
 - Cite sources inline as [1], [2] after the sentence they support.
 - Plain language, short paragraphs, under 180 words. Explain terms like "nonresident alien" when you use them.
+- Write only the final answer for the user. Never include your reasoning, notes or <thinking> tags.
 - This is education, not legal or tax advice. When a situation is unusual (status changes, treaties, dual status), recommend a qualified tax professional or the IRS.`;
 
 const NO_SOURCES_ANSWER =
@@ -78,12 +84,21 @@ function userPrompt(question: string, passages: Passage[]): string {
   return `IRS sources:\n\n${sources || "(none found)"}\n\nQuestion: ${question}`;
 }
 
-const textOf = (m: ConverseMessage) =>
-  m.content
-    .filter((b): b is { text: string } => "text" in b)
-    .map((b) => b.text)
-    .join("\n")
+/** Some models (Nova) emit <thinking>…</thinking> notes; users never see them. */
+export function stripThinking(text: string): string {
+  return text
+    .replace(/<thinking>[\s\S]*?<\/thinking>/gi, "")
+    .replace(/<thinking>[\s\S]*$/i, "")
     .trim();
+}
+
+const textOf = (m: ConverseMessage) =>
+  stripThinking(
+    m.content
+      .filter((b): b is { text: string } => "text" in b)
+      .map((b) => b.text)
+      .join("\n"),
+  );
 
 function citationsFor(answer: string, passages: Passage[]): Citation[] {
   const cited = new Set<number>();
