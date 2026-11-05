@@ -52,7 +52,9 @@ export function verifyRequest(
   }
 
   const expected = mac(secret, timestamp, body);
-  const given = /^[0-9a-f]+$/i.test(signature) ? Buffer.from(signature, "hex") : Buffer.alloc(0);
+  const given = /^[0-9a-f]+$/i.test(signature)
+    ? Buffer.from(signature, "hex")
+    : Buffer.alloc(0);
   if (given.length !== expected.length || !timingSafeEqual(given, expected)) {
     return { ok: false, reason: "bad_signature" };
   }
