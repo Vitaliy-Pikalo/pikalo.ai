@@ -33,6 +33,13 @@ describe("extractNumbers", () => {
     }
   });
 
+  it("ignores citation markers like [4] and [1][4][6]", () => {
+    // Seen live: every blocked answer in the bake-off was a citation marker.
+    expect(extractNumbers("situation. [1][2][3][4][5][6]").map((n) => n.raw)).toEqual([]);
+    expect(extractNumbers("Form 1040-C. [4]").map((n) => n.raw)).toEqual([]);
+    expect(extractNumbers("You need 45 days [4].").map((n) => n.raw)).toEqual(["45"]);
+  });
+
   it("still catches real quantities that look like markers", () => {
     expect(extractNumbers("You have 4 months to file.").map((n) => n.raw)).toEqual(["4"]);
     expect(extractNumbers("It costs $4.").map((n) => n.raw)).toEqual(["$4"]);

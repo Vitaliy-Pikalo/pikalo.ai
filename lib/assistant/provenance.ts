@@ -8,7 +8,7 @@
  *
  * Identifiers are not quantities and are ignored: form numbers ("Form 843",
  * "1040-NR"), publications ("Pub 519"), code sections ("3121(b)(19)"),
- * tax years (1990–2099) and list markers ("1.").
+ * tax years (1990–2099), list markers ("1.", "4)") and citations ("[4]").
  */
 
 export interface ExtractedNumber {
@@ -40,6 +40,8 @@ export function extractNumbers(text: string): ExtractedNumber[] {
     if (/[A-Za-z(-]$/.test(before) && !dollar) continue;
     if (/^(-[A-Za-z]|\()/.test(after) && !dollar && !percent) continue;
     if (ID_PREFIX.test(before) && !dollar && !percent) continue;
+    // Citation markers: "[4]" points at a source, it isn't a quantity.
+    if (/\[$/.test(before) && /^\]/.test(after)) continue;
     // Numbered list markers at the start of a line: "4.", "4)", "**4.**",
     // "- 4.", "### 4." (models format lists all of these ways).
     if (
