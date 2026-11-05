@@ -52,6 +52,8 @@ export interface AskResult {
   toolCalls: ToolCallRecord[];
   /** For blocked answers: short snippets around each unverifiable number. */
   unsupported: string[];
+  /** Blocked only: the withheld draft, for the review queue. Never sent to users. */
+  draft?: string;
   model: string;
   usage: { inputTokens: number; outputTokens: number };
 }
@@ -151,6 +153,7 @@ export async function ask(question: string, deps: AskDeps): Promise<AskResult> {
     answer: string,
     passages: Passage[],
     unsupported: string[] = [],
+    draft?: string,
   ): AskResult => ({
     status,
     answer,
@@ -159,6 +162,7 @@ export async function ask(question: string, deps: AskDeps): Promise<AskResult> {
     unsupported,
     model: deps.modelId,
     usage,
+    ...(draft !== undefined ? { draft } : {}),
   });
 
   const passages = await deps.retrieve(await deps.embed(q));
@@ -244,9 +248,13 @@ export async function ask(question: string, deps: AskDeps): Promise<AskResult> {
       if (!res) return gaveUp();
     }
     if (!usedRequired() && statesNumbers()) {
-      return result("blocked", BLOCKED_ANSWER, passages, [
-        `required tool ${required} not used`,
-      ]);
+      return result(
+        "blocked",
+        BLOCKED_ANSWER,
+        passages,
+        [`required tool ${required} not used`],
+        answerText(),
+      );
     }
   }
 
@@ -283,6 +291,7 @@ export async function ask(question: string, deps: AskDeps): Promise<AskResult> {
           .slice(Math.max(0, n.index - 20), n.index + n.raw.length + 12)
           .replace(/\s+/g, " "),
       ),
+      answer,
     );
   }
   return result("answered", answer, passages);

@@ -5,12 +5,15 @@
  */
 
 import { MAX_QUESTION_CHARS, type AskResult } from "@/lib/assistant/ask";
+import type { WithheldAnswer } from "@/lib/assistant/review-queue";
 
 export const RATE_LIMIT_PER_MINUTE = 8;
 const WINDOW_MS = 60_000;
 
 export interface AskHandlerDeps {
   run(question: string): Promise<AskResult>;
+  /** Saves withheld answers for human review (redaction happens inside). */
+  record?(item: WithheldAnswer): Promise<void>;
   now?: () => number;
 }
 
@@ -56,6 +59,21 @@ export function createAskHandler(deps: AskHandlerDeps) {
     const started = now();
     try {
       const r = await deps.run(question);
+      if (r.status === "blocked" && deps.record) {
+        // Best effort: a queue outage must never cost the user their answer.
+        await deps
+          .record({
+            model: r.model,
+            question,
+            draft: r.draft ?? "",
+            reason: r.unsupported,
+            citations: r.citations,
+            tools: r.toolCalls.map(({ name, ok }) => ({ name, ok })),
+          })
+          .catch((e) =>
+            console.error(JSON.stringify({ event: "queue_failed", error: String(e) })),
+          );
+      }
       console.log(
         JSON.stringify({
           event: "ask",
