@@ -79,6 +79,14 @@ describe("POST /api/ask handler", () => {
     expect(await res.text()).not.toContain("secret-detail");
   });
 
+  it("logs which numbers were blocked, for debugging", async () => {
+    const log = vi.spyOn(console, "log").mockImplementation(() => {});
+    const blocked = { ...ok, status: "blocked" as const, unsupported: ["$9,999"] };
+    await createAskHandler({ run: vi.fn(async () => blocked) })(req({ question: "q" }));
+    expect(JSON.stringify(log.mock.calls)).toContain("$9,999");
+    log.mockRestore();
+  });
+
   it("never logs the question text", async () => {
     const log = vi.spyOn(console, "log").mockImplementation(() => {});
     await createAskHandler({ run: vi.fn(async () => ok) })(
