@@ -1,0 +1,86 @@
+{
+  "version": 1,
+  "description": "Answers paired with their sources. `ok` is whether every number in the answer is supported. Measures the guardrail's precision (never blocks a good answer) and recall (always blocks an invented number).",
+  "cases": [
+    {
+      "id": "prov-01",
+      "answer": "You can likely get back $3,672.00 in Social Security and Medicare tax.",
+      "sources": ["{\"refundEstimate\":3672,\"totalWithheld\":3672}"],
+      "ok": true
+    },
+    {
+      "id": "prov-02",
+      "answer": "You can likely get back about $3,800.",
+      "sources": ["{\"refundEstimate\":3672}"],
+      "ok": false
+    },
+    {
+      "id": "prov-03",
+      "answer": "You need at least 31 days this year and 183 days over three years, counting 1/3 of last year's days.",
+      "sources": [
+        "You will be considered a United States resident if you are physically present at least 31 days during the current year, and 183 days during the 3-year period, counting 1/3 of the days present in the first year before."
+      ],
+      "ok": true
+    },
+    {
+      "id": "prov-04",
+      "answer": "You need at least 30 days this year.",
+      "sources": ["physically present at least 31 days during the current year"],
+      "ok": false
+    },
+    {
+      "id": "prov-05",
+      "answer": "File Form 843 with Form 8316 for 2026; see section 3121(b)(19).",
+      "sources": [],
+      "ok": true
+    },
+    {
+      "id": "prov-06",
+      "answer": "The 2026 limit is $7,500, or $8,600 if you're 50 or older.",
+      "sources": [
+        "{\"baseLimit\":7500}",
+        "The IRA catch-up contribution limit for individuals aged 50 and over is $1,100, for a total of $8,600."
+      ],
+      "ok": true
+    },
+    {
+      "id": "prov-07",
+      "answer": "The 2026 limit is $7,000.",
+      "sources": ["{\"baseLimit\":7500}"],
+      "ok": false
+    },
+    {
+      "id": "prov-08",
+      "answer": "Social Security is 6.2% and Medicare is 1.45% of wages.",
+      "sources": ["{\"socialSecurity\":0.062,\"medicare\":0.0145}"],
+      "ok": true
+    },
+    {
+      "id": "prov-09",
+      "answer": "Medicare is 2.35% of your wages.",
+      "sources": ["{\"medicare\":0.0145}"],
+      "ok": false
+    },
+    {
+      "id": "prov-10",
+      "answer": "With your 200 days you meet the test.",
+      "sources": ["{\"result\":\"resident\"}"],
+      "question": "I was here 200 days this year on an H-1B",
+      "ok": true
+    },
+    {
+      "id": "prov-11",
+      "answer": "Accounts over $10,000 combined must be reported on FinCEN Form 114.",
+      "sources": [
+        "if the aggregate value of all foreign financial accounts exceeded $10,000 at any time during the calendar year"
+      ],
+      "ok": true
+    },
+    {
+      "id": "prov-12",
+      "answer": "Accounts over $50,000 must be reported on FinCEN Form 114.",
+      "sources": ["exceeded $10,000 at any time during the calendar year"],
+      "ok": false
+    }
+  ]
+}

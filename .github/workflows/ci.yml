@@ -18,4 +18,6 @@ jobs:
       - run: npm run lint
       - run: npm run typecheck
       - run: npm test
+      - name: Evals (gate)
+        run: npm run eval
       - run: npm run build
