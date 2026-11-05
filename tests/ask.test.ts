@@ -249,6 +249,65 @@ describe("tool-required guard", () => {
     expect(r.answer).not.toContain("7,000");
   });
 
+  it("nudges toward the right calculator even when the answer has no numbers", async () => {
+    // Seen live: Lite called the residency tool for a W-2 FICA question and
+    // answered without the refund amount.
+    const ficaCall: ConverseResponse = {
+      output: {
+        message: {
+          role: "assistant",
+          content: [
+            {
+              toolUse: {
+                toolUseId: "f1",
+                name: "check_fica_refund",
+                input: {
+                  taxYear: 2026,
+                  visa: "f1",
+                  firstYearInStatus: 2024,
+                  job: "on_campus",
+                  wages: 10000,
+                  socialSecurityWithheld: 620,
+                  medicareWithheld: 145,
+                },
+              },
+            },
+          ],
+        },
+      },
+      stopReason: "tool_use",
+    };
+    const { deps: d, converse } = deps([
+      text("You're exempt, so ask your employer for a refund."),
+      ficaCall,
+      text("You can likely get back $765. Ask your employer first."),
+    ]);
+    const r = await ask(
+      "F-1 since 2024, on-campus job, W-2 shows $620 Social Security and $145 Medicare. Refund?",
+      d,
+    );
+    expect(r.answer).toContain("$765");
+    expect(converse).toHaveBeenCalledTimes(3);
+  });
+
+  it("lets a no-number answer through if the model still skips the tool", async () => {
+    const { deps: d } = deps([
+      text("You're exempt, so ask your employer for a refund."),
+      text("You're exempt; ask your employer."),
+    ]);
+    const r = await ask("F-1, W-2 shows $620 Social Security withheld. Refund?", d);
+    expect(r.status).toBe("answered");
+  });
+
+  it("doesn't nudge when the model asks the user a clarifying question", async () => {
+    const { deps: d, converse } = deps([
+      text("What year did you first arrive on your F-1 visa?"),
+    ]);
+    const r = await ask("My W-2 shows $620 Social Security withheld. Refund?", d);
+    expect(r.status).toBe("answered");
+    expect(converse).toHaveBeenCalledTimes(1);
+  });
+
   it("doesn't require a tool for general questions without personal numbers", async () => {
     const { deps: d, converse } = deps([text("A Roth IRA grows tax-free [1].")]);
     const r = await ask("What is a Roth IRA?", d);
