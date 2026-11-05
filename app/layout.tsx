@@ -32,6 +32,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             aria-label="Main"
             className="flex flex-wrap justify-end gap-x-4 gap-y-1 text-sm text-slate"
           >
+            <Link href="/ask" className="font-semibold text-ink hover:text-stamp">
+              Ask
+            </Link>
             <Link href="/check" className="hover:text-ink">
               Residency
             </Link>
