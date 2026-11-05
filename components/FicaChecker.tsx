@@ -29,7 +29,7 @@ const VISAS: { value: FicaVisa; label: string; hint?: string }[] = [
 ];
 
 const JOBS: { value: FicaJob; label: string; hint?: string }[] = [
-  { value: "opt", label: "OPT or STEM OPT" },
+  { value: "opt", label: "OPT, STEM OPT or practical training" },
   { value: "cpt", label: "CPT internship" },
   { value: "on_campus", label: "On-campus job", hint: "TA, RA, dining, library" },
   { value: "unauthorized", label: "Something else", hint: "not approved for my visa" },
@@ -111,7 +111,7 @@ export default function FicaChecker() {
               </p>
               <MoneyField
                 id={`${id}-wages`}
-                label="Box 1 · Wages"
+                label="Box 3 · Social Security wages"
                 value={wages}
                 onChange={setWages}
               />
