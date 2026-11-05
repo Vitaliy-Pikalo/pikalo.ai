@@ -184,7 +184,51 @@ describe("ask", () => {
   });
 });
 
+describe("model output cleanup", () => {
+  it("strips <thinking> blocks from the answer, closed or not", async () => {
+    const { deps: d } = deps([
+      text(
+        "<thinking>The user wants days. Source 1 says 31.</thinking>You need at least 31 days [1].",
+      ),
+    ]);
+    const r = await ask("how many days?", d);
+    expect(r.answer).toBe("You need at least 31 days [1].");
+    const { deps: d2 } = deps([text("You need 31 days [1].<thinking>unfinished")]);
+    expect((await ask("how many days?", d2)).answer).toBe("You need 31 days [1].");
+  });
+
+  it("ignores numbers inside thinking when checking provenance", async () => {
+    const { deps: d } = deps([
+      text("<thinking>maybe 999 days?</thinking>You need at least 31 days [1]."),
+    ]);
+    expect((await ask("how many days?", d)).status).toBe("answered");
+  });
+});
+
+describe("system prompt", () => {
+  it("tells the model when to use tools and to hide reasoning", async () => {
+    const { SYSTEM_PROMPT } = await import("@/lib/assistant/ask");
+    expect(SYSTEM_PROMPT).toMatch(/check_fica_refund/);
+    expect(SYSTEM_PROMPT).toMatch(/general question/i);
+    expect(SYSTEM_PROMPT).toMatch(/thinking/i);
+  });
+});
+
 describe("tool runner", () => {
+  it("describes every tool input field so the model fills them correctly", async () => {
+    const specs = await createMcpToolRunner().specs();
+    for (const s of specs) {
+      const props = (
+        s.toolSpec.inputSchema.json as {
+          properties: Record<string, { description?: string }>;
+        }
+      ).properties;
+      for (const [field, schema] of Object.entries(props)) {
+        expect(schema.description, `${s.toolSpec.name}.${field}`).toBeTruthy();
+      }
+    }
+  });
+
   it("exposes the three MCP tools as Bedrock tool specs", async () => {
     const specs = await createMcpToolRunner().specs();
     expect(specs.map((s) => s.toolSpec.name).sort()).toEqual([
