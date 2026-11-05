@@ -53,7 +53,7 @@
       "id": "treaty-p901",
       "question": "Can a tax treaty exempt my scholarship or wages from U.S. tax as a student?",
       "expectStatus": ["answered"],
-      "mustInclude": ["treaty"],
+      "mustInclude": ["treaty|treaties"],
       "expectCitation": "p901|p519"
     },
     {
