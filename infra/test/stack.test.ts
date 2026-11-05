@@ -3,18 +3,24 @@ import { App } from "aws-cdk-lib";
 import { Match, Template } from "aws-cdk-lib/assertions";
 import { EMBEDDING_MODEL_ID, PikaloStack } from "../lib/pikalo-stack";
 
-let t: Template;
+let t: Template; // default: no OIDC (what the real account deploys)
+let withOidc: Template;
+
+const env = { account: "123456789012", region: "us-east-1" };
 
 beforeAll(() => {
-  const app = new App();
-  const stack = new PikaloStack(app, "Test", {
-    env: { account: "123456789012", region: "us-east-1" },
-    vercelTeamSlug: "team-x",
-    vercelProject: "pikalo",
-    githubRepo: "owner/repo",
-    createGithubOidcProvider: true,
-  });
-  t = Template.fromStack(stack);
+  t = Template.fromStack(new PikaloStack(new App(), "Test", { env }));
+  withOidc = Template.fromStack(
+    new PikaloStack(new App(), "TestOidc", {
+      env,
+      oidc: {
+        vercelTeamSlug: "team-x",
+        vercelProject: "pikalo",
+        githubRepo: "owner/repo",
+        createGithubOidcProvider: true,
+      },
+    }),
+  );
 });
 
 const MODEL_ARN = `arn:aws:bedrock:us-east-1::foundation-model/${EMBEDDING_MODEL_ID}`;
@@ -52,12 +58,15 @@ describe("raw page archive", () => {
 
 describe("ingest Lambda", () => {
   it("runs on Node 22 arm64 without reserved concurrency", () => {
+    // matches the ingest function (15 min timeout)
     t.hasResourceProperties("AWS::Lambda::Function", {
       Runtime: "nodejs22.x",
       Architectures: ["arm64"],
       Timeout: 900,
       ReservedConcurrentExecutions: Match.absent(),
-      Environment: { Variables: Match.objectLike({ BEDROCK_MODEL_ID: EMBEDDING_MODEL_ID }) },
+      Environment: {
+        Variables: Match.objectLike({ BEDROCK_MODEL_ID: EMBEDDING_MODEL_ID }),
+      },
     });
   });
 
@@ -84,7 +93,10 @@ describe("archive permissions", () => {
 
   it("seeds the secret as JSON so the Lambda fails with a clear message", () => {
     t.hasResourceProperties("AWS::SecretsManager::Secret", {
-      GenerateSecretString: { SecretStringTemplate: "{}", GenerateStringKey: "placeholder" },
+      GenerateSecretString: {
+        SecretStringTemplate: "{}",
+        GenerateStringKey: "placeholder",
+      },
     });
   });
 });
@@ -93,11 +105,14 @@ describe("least-privilege Bedrock access", () => {
   it("only ever allows InvokeModel on the Titan embedding model", () => {
     const policies = t.findResources("AWS::IAM::Policy");
     const bedrockStatements = Object.values(policies).flatMap((p) =>
-      (p.Properties.PolicyDocument.Statement as { Action: string | string[]; Resource: unknown }[]).filter(
-        (s) => [s.Action].flat().some((a) => a.startsWith("bedrock:")),
-      ),
+      (
+        p.Properties.PolicyDocument.Statement as {
+          Action: string | string[];
+          Resource: unknown;
+        }[]
+      ).filter((s) => [s.Action].flat().some((a) => a.startsWith("bedrock:"))),
     );
-    expect(bedrockStatements.length).toBe(2); // ingest Lambda + Vercel role
+    expect(bedrockStatements.length).toBe(2); // ingest + embed Lambdas
     for (const s of bedrockStatements) {
       expect(s.Action).toBe("bedrock:InvokeModel");
       expect(JSON.stringify(s.Resource)).toContain(EMBEDDING_MODEL_ID);
@@ -109,7 +124,7 @@ describe("least-privilege Bedrock access", () => {
 
 describe("OIDC roles", () => {
   it("Vercel role trusts only the pikalo project's production and preview", () => {
-    t.hasResourceProperties("AWS::IAM::Role", {
+    withOidc.hasResourceProperties("AWS::IAM::Role", {
       AssumeRolePolicyDocument: {
         Statement: [
           Match.objectLike({
@@ -130,14 +145,15 @@ describe("OIDC roles", () => {
   });
 
   it("GitHub role trusts only main of this repo", () => {
-    t.hasResourceProperties("AWS::IAM::Role", {
+    withOidc.hasResourceProperties("AWS::IAM::Role", {
       AssumeRolePolicyDocument: {
         Statement: [
           Match.objectLike({
             Condition: {
               StringEquals: {
                 "token.actions.githubusercontent.com:aud": "sts.amazonaws.com",
-                "token.actions.githubusercontent.com:sub": "repo:owner/repo:ref:refs/heads/main",
+                "token.actions.githubusercontent.com:sub":
+                  "repo:owner/repo:ref:refs/heads/main",
               },
             },
           }),
@@ -146,8 +162,38 @@ describe("OIDC roles", () => {
     });
   });
 
-  it("creates no IAM users or access keys", () => {
-    t.resourceCountIs("AWS::IAM::User", 0);
-    t.resourceCountIs("AWS::IAM::AccessKey", 0);
+  it("creates no IAM users or access keys in either mode", () => {
+    for (const x of [t, withOidc]) {
+      x.resourceCountIs("AWS::IAM::User", 0);
+      x.resourceCountIs("AWS::IAM::AccessKey", 0);
+    }
+  });
+
+  it("creates no OIDC providers by default (blocked by the account's org policy)", () => {
+    t.resourceCountIs("Custom::AWSCDKOpenIdConnectProvider", 0);
+    withOidc.resourceCountIs("Custom::AWSCDKOpenIdConnectProvider", 2);
+  });
+});
+
+describe("signed embed service", () => {
+  it("exposes the embed Lambda through a function URL", () => {
+    t.hasResourceProperties("AWS::Lambda::Url", { AuthType: "NONE" });
+    t.hasResourceProperties("AWS::Lambda::Function", {
+      Timeout: 10,
+      Environment: {
+        Variables: Match.objectLike({ SIGNING_SECRET_ARN: Match.anyValue() }),
+      },
+    });
+  });
+
+  it("generates a long random signing secret", () => {
+    t.hasResourceProperties("AWS::SecretsManager::Secret", {
+      GenerateSecretString: { PasswordLength: 64, ExcludePunctuation: true },
+    });
+  });
+
+  it("outputs what the Vercel app needs", () => {
+    t.hasOutput("EmbedUrl", {});
+    t.hasOutput("EmbedSigningSecretArn", {});
   });
 });

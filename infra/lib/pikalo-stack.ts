@@ -22,7 +22,7 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 
 export const EMBEDDING_MODEL_ID = "amazon.titan-embed-text-v2:0";
 
-export interface PikaloStackProps extends StackProps {
+export interface OidcProps {
   vercelTeamSlug: string;
   vercelProject: string;
   githubRepo: string;
@@ -30,20 +30,45 @@ export interface PikaloStackProps extends StackProps {
   createGithubOidcProvider: boolean;
 }
 
+export interface PikaloStackProps extends StackProps {
+  /**
+   * OIDC roles for Vercel and GitHub. Off when the account's org policy denies
+   * iam:CreateOpenIDConnectProvider (as AWS "new experience" accounts do);
+   * the app then reaches AWS only through the HMAC-signed embed URL.
+   */
+  oidc?: OidcProps;
+}
+
+const bundling: nodejs.BundlingOptions = {
+  format: nodejs.OutputFormat.ESM,
+  target: "node22",
+  minify: true,
+  sourceMap: true,
+  externalModules: ["@aws-sdk/*"],
+  banner:
+    "import { createRequire } from 'module'; const require = createRequire(import.meta.url);",
+};
+
 /**
  * Pikalo's AWS side:
  * - S3 archive of every IRS page version we ingested
  * - Weekly Lambda: fetch → chunk → embed (Bedrock Titan) → upsert to Supabase
- * - Vercel OIDC role that can only call the embedding model (query time)
- * - GitHub OIDC role for `cdk deploy` from main. It can assume the CDK
- *   bootstrap roles, which are broad by design, so treat it as admin-level.
+ * - Embed Lambda behind an HMAC-signed function URL (query time, from Vercel)
+ * - Optional OIDC roles for Vercel and GitHub
  * No long-lived AWS keys anywhere.
  */
 export class PikaloStack extends Stack {
-  constructor(scope: Construct, id: string, props: PikaloStackProps) {
+  constructor(scope: Construct, id: string, props: PikaloStackProps = {}) {
     super(scope, id, props);
 
     const embeddingModelArn = `arn:${this.partition}:bedrock:${this.region}::foundation-model/${EMBEDDING_MODEL_ID}`;
+    const invokeEmbeddingModel = () =>
+      new iam.PolicyStatement({
+        actions: ["bedrock:InvokeModel"],
+        resources: [embeddingModelArn],
+      });
+
+    // ---------- Ingestion ----------
 
     const bucket = new s3.Bucket(this, "RawPages", {
       versioned: true,
@@ -56,14 +81,12 @@ export class PikaloStack extends Stack {
 
     const supabaseSecret = new secretsmanager.Secret(this, "SupabaseIngestSecret", {
       // Placeholder JSON; the real values are pasted in after deploy.
-      generateSecretString: { secretStringTemplate: "{}", generateStringKey: "placeholder" },
+      generateSecretString: {
+        secretStringTemplate: "{}",
+        generateStringKey: "placeholder",
+      },
       description:
         'Set to {"SUPABASE_URL":"...","SUPABASE_SERVICE_ROLE_KEY":"..."} in the console. Used only by the ingest Lambda.',
-    });
-
-    const logGroup = new logs.LogGroup(this, "IngestLogs", {
-      retention: logs.RetentionDays.ONE_MONTH,
-      removalPolicy: RemovalPolicy.DESTROY,
     });
 
     const ingest = new nodejs.NodejsFunction(this, "IngestFn", {
@@ -75,21 +98,16 @@ export class PikaloStack extends Stack {
       // No reserved concurrency: new accounts (limit 10) reject any reservation,
       // and the single weekly rule already means one run at a time.
       timeout: Duration.minutes(15),
-      logGroup,
+      logGroup: new logs.LogGroup(this, "IngestLogs", {
+        retention: logs.RetentionDays.ONE_MONTH,
+        removalPolicy: RemovalPolicy.DESTROY,
+      }),
       environment: {
         BUCKET: bucket.bucketName,
         SECRET_ARN: supabaseSecret.secretArn,
         BEDROCK_MODEL_ID: EMBEDDING_MODEL_ID,
       },
-      bundling: {
-        format: nodejs.OutputFormat.ESM,
-        target: "node22",
-        minify: true,
-        sourceMap: true,
-        externalModules: ["@aws-sdk/*"],
-        banner:
-          "import { createRequire } from 'module'; const require = createRequire(import.meta.url);",
-      },
+      bundling,
     });
 
     // Read (incl. ListBucket, so a missing key is NoSuchKey not AccessDenied)
@@ -97,12 +115,7 @@ export class PikaloStack extends Stack {
     bucket.grantRead(ingest);
     bucket.grantPut(ingest);
     supabaseSecret.grantRead(ingest);
-    ingest.addToRolePolicy(
-      new iam.PolicyStatement({
-        actions: ["bedrock:InvokeModel"],
-        resources: [embeddingModelArn],
-      }),
-    );
+    ingest.addToRolePolicy(invokeEmbeddingModel());
 
     new events.Rule(this, "WeeklyIngest", {
       description: "Re-ingest IRS pages every Monday 09:00 UTC",
@@ -118,38 +131,85 @@ export class PikaloStack extends Stack {
       treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
     });
 
-    // Vercel → AWS for query embeddings. Only the Pikalo project's
-    // production and preview deployments, only the one model.
-    const vercelIssuer = `oidc.vercel.com/${props.vercelTeamSlug}`;
+    // ---------- Query-time embeddings ----------
+
+    const signingSecret = new secretsmanager.Secret(this, "EmbedSigningSecret", {
+      description:
+        "HMAC key shared by the Vercel app (EMBED_SIGNING_SECRET) and the embed Lambda",
+      generateSecretString: { passwordLength: 64, excludePunctuation: true },
+    });
+
+    const embedFn = new nodejs.NodejsFunction(this, "EmbedFn", {
+      entry: path.join(here, "../lambda/embed.ts"),
+      handler: "handler",
+      runtime: lambda.Runtime.NODEJS_22_X,
+      architecture: lambda.Architecture.ARM_64,
+      memorySize: 256,
+      timeout: Duration.seconds(10),
+      logGroup: new logs.LogGroup(this, "EmbedLogs", {
+        retention: logs.RetentionDays.TWO_WEEKS,
+        removalPolicy: RemovalPolicy.DESTROY,
+      }),
+      environment: {
+        SIGNING_SECRET_ARN: signingSecret.secretArn,
+        BEDROCK_MODEL_ID: EMBEDDING_MODEL_ID,
+      },
+      bundling,
+    });
+    signingSecret.grantRead(embedFn);
+    embedFn.addToRolePolicy(invokeEmbeddingModel());
+
+    // Public URL by design: every request must carry a valid HMAC, checked
+    // before Bedrock is called. Unsigned calls cost a few ms of Lambda only.
+    const embedUrl = embedFn.addFunctionUrl({
+      authType: lambda.FunctionUrlAuthType.NONE,
+    });
+
+    new cloudwatch.Alarm(this, "EmbedErrors", {
+      alarmDescription: "Embed Lambda errors (Bedrock failures or crashes)",
+      metric: embedFn.metricErrors({ period: Duration.minutes(5) }),
+      threshold: 5,
+      evaluationPeriods: 1,
+      treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
+    });
+
+    new CfnOutput(this, "BucketName", { value: bucket.bucketName });
+    new CfnOutput(this, "SupabaseSecretArn", { value: supabaseSecret.secretArn });
+    new CfnOutput(this, "IngestFunctionName", { value: ingest.functionName });
+    new CfnOutput(this, "EmbedUrl", { value: embedUrl.url });
+    new CfnOutput(this, "EmbedSigningSecretArn", { value: signingSecret.secretArn });
+
+    if (props.oidc) this.addOidcRoles(props.oidc, invokeEmbeddingModel);
+  }
+
+  private addOidcRoles(o: OidcProps, invokeEmbeddingModel: () => iam.PolicyStatement) {
+    // Vercel → AWS: only this project's production and preview deployments.
+    const vercelIssuer = `oidc.vercel.com/${o.vercelTeamSlug}`;
     const vercelProvider = new iam.OpenIdConnectProvider(this, "VercelOidc", {
       url: `https://${vercelIssuer}`,
-      clientIds: [`https://vercel.com/${props.vercelTeamSlug}`],
+      clientIds: [`https://vercel.com/${o.vercelTeamSlug}`],
     });
     const vercelRole = new iam.Role(this, "VercelQueryRole", {
       description: "Assumed by the Pikalo Vercel app to embed user questions",
       maxSessionDuration: Duration.hours(1),
       assumedBy: new iam.WebIdentityPrincipal(vercelProvider.openIdConnectProviderArn, {
         StringEquals: {
-          [`${vercelIssuer}:aud`]: `https://vercel.com/${props.vercelTeamSlug}`,
+          [`${vercelIssuer}:aud`]: `https://vercel.com/${o.vercelTeamSlug}`,
         },
         StringLike: {
           [`${vercelIssuer}:sub`]: [
-            `owner:${props.vercelTeamSlug}:project:${props.vercelProject}:environment:production`,
-            `owner:${props.vercelTeamSlug}:project:${props.vercelProject}:environment:preview`,
+            `owner:${o.vercelTeamSlug}:project:${o.vercelProject}:environment:production`,
+            `owner:${o.vercelTeamSlug}:project:${o.vercelProject}:environment:preview`,
           ],
         },
       }),
     });
-    vercelRole.addToPolicy(
-      new iam.PolicyStatement({
-        actions: ["bedrock:InvokeModel"],
-        resources: [embeddingModelArn],
-      }),
-    );
+    vercelRole.addToPolicy(invokeEmbeddingModel());
 
-    // GitHub Actions → AWS for `cdk deploy` from main only.
+    // GitHub Actions → AWS for `cdk deploy` from main. It can assume the CDK
+    // bootstrap roles, which are broad by design, so treat it as admin-level.
     const githubIssuer = "token.actions.githubusercontent.com";
-    const githubProviderArn = props.createGithubOidcProvider
+    const githubProviderArn = o.createGithubOidcProvider
       ? new iam.OpenIdConnectProvider(this, "GithubOidc", {
           url: `https://${githubIssuer}`,
           clientIds: ["sts.amazonaws.com"],
@@ -161,7 +221,7 @@ export class PikaloStack extends Stack {
       assumedBy: new iam.WebIdentityPrincipal(githubProviderArn, {
         StringEquals: {
           [`${githubIssuer}:aud`]: "sts.amazonaws.com",
-          [`${githubIssuer}:sub`]: `repo:${props.githubRepo}:ref:refs/heads/main`,
+          [`${githubIssuer}:sub`]: `repo:${o.githubRepo}:ref:refs/heads/main`,
         },
       }),
     });
@@ -172,9 +232,6 @@ export class PikaloStack extends Stack {
       }),
     );
 
-    new CfnOutput(this, "BucketName", { value: bucket.bucketName });
-    new CfnOutput(this, "SupabaseSecretArn", { value: supabaseSecret.secretArn });
-    new CfnOutput(this, "IngestFunctionName", { value: ingest.functionName });
     new CfnOutput(this, "VercelRoleArn", { value: vercelRole.roleArn });
     new CfnOutput(this, "GithubDeployRoleArn", { value: deployRole.roleArn });
   }
