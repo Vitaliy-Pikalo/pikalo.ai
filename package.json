@@ -11,7 +11,8 @@
     "format": "prettier --write .",
     "typecheck": "next typegen && tsc --noEmit",
     "mcp": "tsx mcp/stdio.mts",
-    "eval": "tsx evals/run.mts"
+    "eval": "tsx evals/run.mts",
+    "eval:assistant": "tsx evals/assistant.mts"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.32.2",
