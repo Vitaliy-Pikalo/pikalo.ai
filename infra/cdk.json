@@ -1,6 +1,7 @@
 {
   "app": "npx tsx bin/app.ts",
   "context": {
+    "region": "us-east-2",
     "vercelTeamSlug": "pikalovitaliy-9642s-projects",
     "vercelProject": "pikalo",
     "githubRepo": "Vitaliy-Pikalo/pikalo.ai",
