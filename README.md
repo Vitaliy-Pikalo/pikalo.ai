@@ -36,6 +36,28 @@ Hosted on Vercel. Every push to `main` deploys to production, and GitHub Actions
 | `SUPABASE_URL`             | Supabase project URL                                |
 | `SUPABASE_PUBLISHABLE_KEY` | Publishable key; the table's RLS allows insert-only |
 
+## AWS ingestion pipeline (`infra/`)
+
+A CDK stack (TypeScript) that keeps the assistant's IRS knowledge base current:
+
+```
+EventBridge (weekly) → Lambda → fetch IRS page → S3 archive (versioned)
+                              → chunk → Bedrock Titan v2 embeddings (1024-d)
+                              → Supabase pgvector (upsert, then drop stale rows)
+```
+
+- **No long-lived AWS keys.** Vercel and GitHub Actions both assume IAM roles over OIDC, scoped to this project (Vercel: production/preview only; GitHub: `main` only).
+- **Least privilege.** Both Bedrock grants are `InvokeModel` on the single Titan embedding model ARN. Asserted in `infra/test/stack.test.ts`.
+- **Safe re-ingest.** Unchanged pages are skipped by hash; an empty or failed page never deletes existing passages; the S3 archive is written last so a failed run retries.
+- **Supabase service key lives only in Secrets Manager**, read by the Lambda; it never touches Vercel.
+
+```bash
+cd infra
+npm install
+npm test           # CDK assertion tests (synth + bundle)
+npx cdk deploy     # needs AWS credentials and a bootstrapped account
+```
+
 ## Roadmap
 
 - Citation-grounded assistant (retrieval over IRS publications and state revenue guidance) with an evaluation set for answer and citation accuracy
