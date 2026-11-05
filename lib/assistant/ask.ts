@@ -223,11 +223,14 @@ export async function ask(question: string, deps: AskDeps): Promise<AskResult> {
   if (!res) return gaveUp();
 
   // Tool-required guard: personal figures on a calculator's topic must go
-  // through that calculator. A clarifying question (no numbers) is fine.
+  // through that calculator. Nudge once unless the model is asking the user
+  // a clarifying question; withhold only if it still states numbers.
   const required = requiredTool(q);
   const usedRequired = () => toolCalls.some((t) => t.name === required && t.ok);
-  const statesNumbers = () => extractNumbers(textOf(res!.output.message)).length > 0;
-  if (required && !usedRequired() && statesNumbers()) {
+  const answerText = () => textOf(res!.output.message);
+  const statesNumbers = () => extractNumbers(answerText()).length > 0;
+  const asksUser = () => answerText().includes("?");
+  if (required && !usedRequired() && !asksUser()) {
     if (calls < MAX_MODEL_CALLS) {
       messages.push({
         role: "user",
