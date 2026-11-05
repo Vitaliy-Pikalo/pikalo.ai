@@ -11,7 +11,7 @@ import {
 const STATUS_OPTIONS: { value: ResidencyStatus; label: string; hint: string }[] = [
   { value: "student", label: "Student", hint: "F-1, J-1 student, M-1 or Q" },
   { value: "teacher_trainee", label: "Teacher, researcher or trainee", hint: "J-1 or Q, not a student" },
-  { value: "other", label: "Work or other visa", hint: "H-1B, L-1, O-1, TN, B-1/B-2 and others" },
+  { value: "other", label: "Work or other visa", hint: "H-1B, L-1, O-1, TN, B-1/B-2" },
   { value: "green_card", label: "Green card holder", hint: "Lawful permanent resident" },
   { value: "citizen", label: "U.S. citizen", hint: "" },
 ];
@@ -34,8 +34,11 @@ export default function ResidencyChecker() {
   const [days, setDays] = useState({ current: "", prior1: "", prior2: "" });
   const [firstYear, setFirstYear] = useState(String(DEFAULT_TAX_YEAR - 1));
   const [priorHistory, setPriorHistory] = useState(false);
+  const [foreignEmployer, setForeignEmployer] = useState(false);
+  const [statusChanged, setStatusChanged] = useState(false);
 
   const needsFirstYear = status === "student" || status === "teacher_trainee";
+  const needsDays = status !== "citizen" && status !== "green_card";
 
   const output = checkResidency({
     taxYear,
@@ -45,11 +48,12 @@ export default function ResidencyChecker() {
     daysPrior2: toInt(days.prior2),
     firstYearInStatus:
       needsFirstYear && firstYear.trim() !== "" ? toInt(firstYear) : undefined,
-    priorExemptHistory: status === "teacher_trainee" ? priorHistory : undefined,
+    priorExemptHistory: needsFirstYear ? priorHistory : undefined,
+    foreignEmployer: status === "teacher_trainee" ? foreignEmployer : undefined,
+    statusChanged: needsDays ? statusChanged : undefined,
   });
 
   // Don't show a verdict until the current-year days are filled in.
-  const needsDays = status !== "citizen" && status !== "green_card";
   const awaitingInput = needsDays && days.current.trim() === "";
   const invalid = output.result === "invalid";
 
@@ -90,6 +94,10 @@ export default function ResidencyChecker() {
               </label>
             ))}
           </div>
+          <p className="mt-2 text-sm text-slate">
+            On an F-2, J-2, M-2 or Q-3 dependent visa? Pick the same option as the main
+            visa holder.
+          </p>
         </fieldset>
 
         <div className="grid gap-4 sm:grid-cols-2">
@@ -126,16 +134,26 @@ export default function ResidencyChecker() {
           )}
         </div>
 
-        {status === "teacher_trainee" && (
-          <label className="flex items-start gap-3">
-            <input
-              type="checkbox"
-              className="mt-1 accent-[var(--ink)]"
-              checked={priorHistory}
-              onChange={(e) => setPriorHistory(e.target.checked)}
-            />
-            <span>I was in the U.S. on an F, J, M or Q visa before this one</span>
-          </label>
+        {needsDays && (
+          <div className="space-y-3">
+            <Checkbox checked={statusChanged} onChange={setStatusChanged}>
+              My visa type changed between {taxYear - 2} and {taxYear} (for example, F-1 to
+              H-1B)
+            </Checkbox>
+            {needsFirstYear && (
+              <Checkbox checked={priorHistory} onChange={setPriorHistory}>
+                {status === "student"
+                  ? "I was in the U.S. as a teacher, researcher or trainee before becoming a student"
+                  : "I was in the U.S. on an F, J, M or Q visa before this one"}
+              </Checkbox>
+            )}
+            {status === "teacher_trainee" && (
+              <Checkbox checked={foreignEmployer} onChange={setForeignEmployer}>
+                An employer outside the U.S. has paid all of my compensation every year
+                I&apos;ve been here
+              </Checkbox>
+            )}
+          </div>
         )}
 
         {status !== "citizen" && status !== "green_card" && (
@@ -198,8 +216,16 @@ function Result({
     },
     nonresident: {
       title: `Likely a nonresident alien for ${taxYear}`,
-      body: "You'd generally file Form 1040-NR if you had U.S. income, plus Form 8843 if you were an exempt individual. Most mainstream tax software only handles resident returns.",
+      body:
+        status === "student" || status === "teacher_trainee"
+          ? "File Form 8843 even if you had no income. If you had U.S. wages or other taxable U.S. income, you'd also generally file Form 1040-NR. Most mainstream tax software only handles resident returns."
+          : "If you had U.S. wages or other taxable U.S. income, you'd generally file Form 1040-NR. Most mainstream tax software only handles resident returns.",
       tone: "border-ink bg-surface",
+    },
+    needs_review: {
+      title: "Your days need to be split by status",
+      body: "",
+      tone: "border-amber bg-amber-soft",
     },
     citizen: {
       title: "Residency tests don't apply to citizens",
@@ -213,7 +239,7 @@ function Result({
     },
   }[output.result];
 
-  const showMeter = output.test === "substantial_presence";
+  const showMeter = output.test === "substantial_presence" && output.result !== "needs_review";
 
   return (
     <section className="lg:sticky lg:top-6 lg:self-start">
@@ -346,5 +372,27 @@ function DayMeter({
         </p>
       )}
     </figure>
+  );
+}
+
+function Checkbox({
+  checked,
+  onChange,
+  children,
+}: {
+  checked: boolean;
+  onChange: (value: boolean) => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <label className="flex items-start gap-3">
+      <input
+        type="checkbox"
+        className="mt-1 accent-[var(--ink)]"
+        checked={checked}
+        onChange={(e) => onChange(e.target.checked)}
+      />
+      <span>{children}</span>
+    </label>
   );
 }
