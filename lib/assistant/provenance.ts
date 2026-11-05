@@ -23,7 +23,7 @@ const ALWAYS_ALLOWED = new Set([0, 1, 2]);
 
 // Words that make the following number an identifier, not a quantity.
 const ID_PREFIX =
-  /(form|forms|pub\.?|publication|section|sec\.|§|schedule|line|box|boxes|question|article|title|chapter|worksheet|part|i-|ds-|f-|j-|m-|h-|w-)\s*$/i;
+  /(form|forms|pub\.?|publication|section|sec\.|§|schedule|line|box|boxes|question|article|title|chapter|worksheet|part|step|i-|ds-|f-|j-|m-|h-|w-)\s*$/i;
 
 const NUMBER_RE =
   /(\$\s?)?(\d{1,3}(?:,\d{3})+(?:\.\d+)?|\d+(?:\.\d+)?)(\s?\/\s?\d+)?(\s?%)?/g;
@@ -40,8 +40,15 @@ export function extractNumbers(text: string): ExtractedNumber[] {
     if (/[A-Za-z(-]$/.test(before) && !dollar) continue;
     if (/^(-[A-Za-z]|\()/.test(after) && !dollar && !percent) continue;
     if (ID_PREFIX.test(before) && !dollar && !percent) continue;
-    // Numbered list markers at the start of a line.
-    if (/(^|\n)\s*$/.test(before) && /^\.\s/.test(after)) continue;
+    // Numbered list markers at the start of a line: "4.", "4)", "**4.**",
+    // "- 4.", "### 4." (models format lists all of these ways).
+    if (
+      /(^|\n)[\s*#>-]*$/.test(before) &&
+      /^(\.|\))(\*\*)?(\s|$)/.test(after) &&
+      !dollar &&
+      !percent
+    )
+      continue;
 
     if (fraction) {
       out.push({ raw: raw.trim(), value: NaN, kind: "fraction", index });
