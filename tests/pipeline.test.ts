@@ -80,6 +80,18 @@ describe("ingestDoc", () => {
   });
 });
 
+describe("duplicate chunks", () => {
+  it("upserts each chunk id once (Postgres rejects repeats in one statement)", async () => {
+    const dup = `<main><h2>Note</h2><p>Same text.</p><h2>Note</h2><p>Same text.</p></main>`;
+    const deps = fakeDeps({ fetchHtml: vi.fn(async () => dup) });
+    const r = await ingestDoc(doc, deps);
+    expect(r.status).toBe("ingested");
+    const rows = (deps.upsert as Mock).mock.calls[0][0] as { id: string }[];
+    expect(new Set(rows.map((x) => x.id)).size).toBe(rows.length);
+    expect(deps.embed).toHaveBeenCalledTimes(rows.length);
+  });
+});
+
 describe("ingestCorpus", () => {
   it("keeps going when one document fails", async () => {
     const deps = fakeDeps({
