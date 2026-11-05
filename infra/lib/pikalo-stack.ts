@@ -22,6 +22,15 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 
 export const EMBEDDING_MODEL_ID = "amazon.titan-embed-text-v2:0";
 
+/**
+ * Chat models the gateway may call. US cross-region inference profiles route
+ * to these three regions, so the role needs the profile and each regional
+ * foundation model.
+ */
+export const CHAT_MODELS = ["amazon.nova-micro-v1:0", "amazon.nova-lite-v1:0"];
+const US_PROFILE_REGIONS = ["us-east-1", "us-east-2", "us-west-2"];
+export const chatProfileId = (model: string) => `us.${model}`;
+
 export interface OidcProps {
   vercelTeamSlug: string;
   vercelProject: string;
@@ -145,7 +154,7 @@ export class PikaloStack extends Stack {
       runtime: lambda.Runtime.NODEJS_22_X,
       architecture: lambda.Architecture.ARM_64,
       memorySize: 256,
-      timeout: Duration.seconds(10),
+      timeout: Duration.seconds(30),
       logGroup: new logs.LogGroup(this, "EmbedLogs", {
         retention: logs.RetentionDays.TWO_WEEKS,
         removalPolicy: RemovalPolicy.DESTROY,
@@ -153,11 +162,23 @@ export class PikaloStack extends Stack {
       environment: {
         SIGNING_SECRET_ARN: signingSecret.secretArn,
         BEDROCK_MODEL_ID: EMBEDDING_MODEL_ID,
+        CHAT_MODEL_ALLOWLIST: CHAT_MODELS.map(chatProfileId).join(","),
       },
       bundling,
     });
     signingSecret.grantRead(embedFn);
     embedFn.addToRolePolicy(invokeEmbeddingModel());
+    embedFn.addToRolePolicy(
+      new iam.PolicyStatement({
+        actions: ["bedrock:InvokeModel"],
+        resources: CHAT_MODELS.flatMap((m) => [
+          `arn:${this.partition}:bedrock:${this.region}:${this.account}:inference-profile/${chatProfileId(m)}`,
+          ...US_PROFILE_REGIONS.map(
+            (r) => `arn:${this.partition}:bedrock:${r}::foundation-model/${m}`,
+          ),
+        ]),
+      }),
+    );
 
     // Public URL by design: every request must carry a valid HMAC, checked
     // before Bedrock is called. Unsigned calls cost a few ms of Lambda only.
