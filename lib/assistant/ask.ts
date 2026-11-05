@@ -89,6 +89,8 @@ export function stripThinking(text: string): string {
   return text
     .replace(/<thinking>[\s\S]*?<\/thinking>/gi, "")
     .replace(/<thinking>[\s\S]*$/i, "")
+    .trim()
+    .replace(/^\**\s*final answer\s*:?\s*\**\s*/i, "")
     .trim();
 }
 

@@ -197,6 +197,13 @@ describe("model output cleanup", () => {
     expect((await ask("how many days?", d2)).answer).toBe("You need 31 days [1].");
   });
 
+  it("drops a leading 'Final Answer:' label", async () => {
+    const { deps: d } = deps([text("Final Answer: You need at least 31 days [1].")]);
+    expect((await ask("how many days?", d)).answer).toBe(
+      "You need at least 31 days [1].",
+    );
+  });
+
   it("ignores numbers inside thinking when checking provenance", async () => {
     const { deps: d } = deps([
       text("<thinking>maybe 999 days?</thinking>You need at least 31 days [1]."),
