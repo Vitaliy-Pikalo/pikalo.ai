@@ -9,7 +9,7 @@
  * passage, a tool result or the question itself, or the answer is withheld.
  */
 
-import { checkProvenance } from "@/lib/assistant/provenance";
+import { checkProvenance, extractNumbers } from "@/lib/assistant/provenance";
 import type {
   ContentBlock,
   ConverseMessage,
@@ -120,6 +120,25 @@ function citationsFor(answer: string, passages: Passage[]): Citation[] {
   }));
 }
 
+/**
+ * When the user states their own figures on a calculator's topic, the
+ * answer must come from that calculator. Provenance alone isn't enough: a
+ * wrong-year limit can still appear in a retrieved source (seen live: $7,000
+ * for a 2026 Roth question, which is the 2025 limit).
+ */
+export function requiredTool(question: string): string | null {
+  if (extractNumbers(question).length === 0) return null;
+  if (/social security|medicare|\bfica\b|\bw-?2\b/i.test(question))
+    return "check_fica_refund";
+  if (/\broth\b|\bira\b/i.test(question)) return "roth_ira_limit";
+  if (
+    /resident|residency|substantial presence/i.test(question) &&
+    /\bdays?\b/i.test(question)
+  )
+    return "check_tax_residency";
+  return null;
+}
+
 export async function ask(question: string, deps: AskDeps): Promise<AskResult> {
   const q = question.trim();
   if (!q || q.length > MAX_QUESTION_CHARS)
@@ -169,32 +188,63 @@ export async function ask(question: string, deps: AskDeps): Promise<AskResult> {
     return res;
   };
 
+  const runTools = async (first: ConverseResponse): Promise<ConverseResponse | null> => {
+    let r = first;
+    while (r.stopReason === "tool_use") {
+      if (calls >= MAX_MODEL_CALLS) return null;
+      const results: ContentBlock[] = [];
+      for (const block of r.output.message.content) {
+        if (!("toolUse" in block)) continue;
+        const { toolUseId, name, input } = block.toolUse;
+        const out = await deps.tools.call(name, input);
+        toolCalls.push({ name, input, ok: out.ok, output: out.output });
+        results.push({
+          toolResult: {
+            toolUseId,
+            content: [{ json: out.output }],
+            status: out.ok ? "success" : "error",
+          },
+        });
+      }
+      messages.push({ role: "user", content: results });
+      r = await callModel();
+    }
+    return r;
+  };
+  const gaveUp = () =>
+    result(
+      "error",
+      "Sorry, I couldn't finish that answer. Please try rephrasing.",
+      passages,
+    );
+
   // Tool loop.
-  let res = await callModel();
-  while (res.stopReason === "tool_use") {
-    if (calls >= MAX_MODEL_CALLS) {
-      return result(
-        "error",
-        "Sorry, I couldn't finish that answer. Please try rephrasing.",
-        passages,
-      );
-    }
-    const results: ContentBlock[] = [];
-    for (const block of res.output.message.content) {
-      if (!("toolUse" in block)) continue;
-      const { toolUseId, name, input } = block.toolUse;
-      const out = await deps.tools.call(name, input);
-      toolCalls.push({ name, input, ok: out.ok, output: out.output });
-      results.push({
-        toolResult: {
-          toolUseId,
-          content: [{ json: out.output }],
-          status: out.ok ? "success" : "error",
-        },
+  let res = await runTools(await callModel());
+  if (!res) return gaveUp();
+
+  // Tool-required guard: personal figures on a calculator's topic must go
+  // through that calculator. A clarifying question (no numbers) is fine.
+  const required = requiredTool(q);
+  const usedRequired = () => toolCalls.some((t) => t.name === required && t.ok);
+  const statesNumbers = () => extractNumbers(textOf(res!.output.message)).length > 0;
+  if (required && !usedRequired() && statesNumbers()) {
+    if (calls < MAX_MODEL_CALLS) {
+      messages.push({
+        role: "user",
+        content: [
+          {
+            text: `The user gave their own figures, so this answer must come from the ${required} tool. Call ${required} now with the facts from the question. Do not quote limits or compute amounts yourself.`,
+          },
+        ],
       });
+      res = await runTools(await callModel());
+      if (!res) return gaveUp();
     }
-    messages.push({ role: "user", content: results });
-    res = await callModel();
+    if (!usedRequired() && statesNumbers()) {
+      return result("blocked", BLOCKED_ANSWER, passages, [
+        `required tool ${required} not used`,
+      ]);
+    }
   }
 
   // Provenance guard with one repair attempt.

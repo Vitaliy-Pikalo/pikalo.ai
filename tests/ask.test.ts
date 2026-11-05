@@ -185,6 +185,78 @@ describe("ask", () => {
   });
 });
 
+describe("tool-required guard", () => {
+  const rothCall: ConverseResponse = {
+    output: {
+      message: {
+        role: "assistant",
+        content: [
+          {
+            toolUse: {
+              toolUseId: "t9",
+              name: "roth_ira_limit",
+              input: {
+                taxYear: 2026,
+                filingStatus: "single",
+                age50OrOlder: false,
+                taxableCompensation: 60000,
+                modifiedAgi: 60000,
+                otherIraContributions: 0,
+              },
+            },
+          },
+        ],
+      },
+    },
+    stopReason: "tool_use",
+  };
+  const rothPassages: Passage[] = [
+    { ...PASSAGES[0], content: "For 2025 the contribution limit is $7,000." },
+  ];
+
+  it("makes the model use the calculator when the user gave their own numbers", async () => {
+    // Seen live: Nova Lite answered $7,000 (the 2025 limit, present in a
+    // source) instead of calling the tool, which returns $7,500 for 2026.
+    const { deps: d, converse } = deps(
+      [
+        text("You can contribute up to $7,000 for 2026 [1]."),
+        rothCall,
+        text("You can contribute up to $7,500 for 2026."),
+      ],
+      { retrieve: vi.fn(async () => rothPassages) },
+    );
+    const r = await ask(
+      "I'm single and earn $60,000. How much can I put in a Roth IRA?",
+      d,
+    );
+    expect(r.status).toBe("answered");
+    expect(r.answer).toContain("$7,500");
+    expect(r.toolCalls[0]).toMatchObject({ name: "roth_ira_limit", ok: true });
+    expect(JSON.stringify(converse.mock.calls[1][0].messages.at(-1))).toContain(
+      "roth_ira_limit",
+    );
+  });
+
+  it("withholds the answer if the model still won't use the calculator", async () => {
+    const { deps: d } = deps([text("Up to $7,000 [1]."), text("Still $7,000 [1].")], {
+      retrieve: vi.fn(async () => rothPassages),
+    });
+    const r = await ask(
+      "I'm single and earn $60,000. How much can I put in a Roth IRA?",
+      d,
+    );
+    expect(r.status).toBe("blocked");
+    expect(r.answer).not.toContain("7,000");
+  });
+
+  it("doesn't require a tool for general questions without personal numbers", async () => {
+    const { deps: d, converse } = deps([text("A Roth IRA grows tax-free [1].")]);
+    const r = await ask("What is a Roth IRA?", d);
+    expect(r.status).toBe("answered");
+    expect(converse).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe("model output cleanup", () => {
   it("strips <thinking> blocks from the answer, closed or not", async () => {
     const { deps: d } = deps([
@@ -270,5 +342,28 @@ describe("retrievePassages", () => {
     await expect(
       retrievePassages([0.1], { url: "https://x", key: "k", fetchFn }),
     ).rejects.toThrow(/500/);
+  });
+});
+
+describe("requiredTool routing on the gold questions", async () => {
+  const { requiredTool } = await import("@/lib/assistant/ask");
+  const gold = (await import("../evals/gold-assistant.json")).default.cases as {
+    id: string;
+    question: string;
+  }[];
+  const q = (id: string) => gold.find((c) => c.id === id)!.question;
+
+  it.each([
+    ["roth-single-60k", "roth_ira_limit"],
+    ["roth-single-phaseout", "roth_ira_limit"],
+    ["fica-f1-oncampus", "check_fica_refund"],
+    ["residency-f1-2024", "check_tax_residency"],
+    ["spt-31-days", null],
+    ["fbar-threshold", null],
+    ["form-8843", null],
+    ["treaty-p901", null],
+    ["out-of-scope", null],
+  ])("%s → %s", (id, tool) => {
+    expect(requiredTool(q(id))).toBe(tool);
   });
 });
