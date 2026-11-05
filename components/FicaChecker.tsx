@@ -2,6 +2,7 @@
 
 import { useId, useState } from "react";
 import Link from "next/link";
+import RefundPacket from "@/components/RefundPacket";
 import { checkFica, formatUsd, type FicaJob, type FicaVisa } from "@/lib/fica";
 import {
   Checkbox,
@@ -60,96 +61,127 @@ export default function FicaChecker() {
   const awaiting = isStudent && ss.trim() === "" && medicare.trim() === "";
 
   return (
-    <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
-      <form className="space-y-7" onSubmit={(e) => e.preventDefault()}>
-        <RadioGroup
-          legend={`Your visa in ${taxYear}`}
-          name={`${id}-visa`}
-          value={visa}
-          onChange={setVisa}
-          options={VISAS}
-        />
+    <>
+      <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
+        <form className="space-y-7" onSubmit={(e) => e.preventDefault()}>
+          <RadioGroup
+            legend={`Your visa in ${taxYear}`}
+            name={`${id}-visa`}
+            value={visa}
+            onChange={setVisa}
+            options={VISAS}
+          />
 
-        {isStudent && (
-          <>
-            <RadioGroup
-              legend="What kind of job?"
-              name={`${id}-job`}
-              value={job}
-              onChange={setJob}
-              options={JOBS}
-            />
-            <div className="grid gap-4 sm:grid-cols-2">
-              <label className="block">
-                <span className="font-semibold">Tax year</span>
-                <select
-                  className={inputClass}
-                  value={taxYear}
-                  onChange={(e) => setTaxYear(Number(e.target.value))}
-                >
-                  {TAX_YEARS.map((y) => (
-                    <option key={y}>{y}</option>
-                  ))}
-                </select>
-              </label>
-              <label className="block">
-                <span className="font-semibold">First year in the U.S. as a student</span>
-                <input
-                  inputMode="numeric"
-                  className={inputClass}
-                  value={firstYear}
-                  onChange={(e) => setFirstYear(e.target.value)}
-                />
-              </label>
-            </div>
-
-            <fieldset className="space-y-4">
-              <legend className="font-semibold">From your W-2</legend>
-              <p className="-mt-2 text-sm text-slate">
-                Your employer sends this by January 31. Leave a box empty if it&apos;s
-                blank.
-              </p>
-              <MoneyField
-                id={`${id}-wages`}
-                label="Box 3 · Social Security wages"
-                value={wages}
-                onChange={setWages}
+          {isStudent && (
+            <>
+              <RadioGroup
+                legend="What kind of job?"
+                name={`${id}-job`}
+                value={job}
+                onChange={setJob}
+                options={JOBS}
               />
               <div className="grid gap-4 sm:grid-cols-2">
-                <MoneyField
-                  id={`${id}-ss`}
-                  label="Box 4 · Social Security tax withheld"
-                  value={ss}
-                  onChange={setSs}
-                />
-                <MoneyField
-                  id={`${id}-med`}
-                  label="Box 6 · Medicare tax withheld"
-                  value={medicare}
-                  onChange={setMedicare}
-                />
+                <label className="block">
+                  <span className="font-semibold">Tax year</span>
+                  <select
+                    className={inputClass}
+                    value={taxYear}
+                    onChange={(e) => setTaxYear(Number(e.target.value))}
+                  >
+                    {TAX_YEARS.map((y) => (
+                      <option key={y}>{y}</option>
+                    ))}
+                  </select>
+                </label>
+                <label className="block">
+                  <span className="font-semibold">
+                    First year in the U.S. as a student
+                  </span>
+                  <input
+                    inputMode="numeric"
+                    className={inputClass}
+                    value={firstYear}
+                    onChange={(e) => setFirstYear(e.target.value)}
+                  />
+                </label>
               </div>
-            </fieldset>
 
-            <Checkbox checked={statusChanged} onChange={setStatusChanged}>
-              My visa type changed during {taxYear} (for example, OPT to H-1B)
-            </Checkbox>
-          </>
-        )}
-      </form>
+              <fieldset className="space-y-4">
+                <legend className="font-semibold">From your W-2</legend>
+                <p className="-mt-2 text-sm text-slate">
+                  Your employer sends this by January 31. Leave a box empty if it&apos;s
+                  blank.
+                </p>
+                <MoneyField
+                  id={`${id}-wages`}
+                  label="Box 3 · Social Security wages"
+                  value={wages}
+                  onChange={setWages}
+                />
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <MoneyField
+                    id={`${id}-ss`}
+                    label="Box 4 · Social Security tax withheld"
+                    value={ss}
+                    onChange={setSs}
+                  />
+                  <MoneyField
+                    id={`${id}-med`}
+                    label="Box 6 · Medicare tax withheld"
+                    value={medicare}
+                    onChange={setMedicare}
+                  />
+                </div>
+              </fieldset>
 
-      <section className="lg:sticky lg:top-6 lg:self-start">
-        {awaiting ? (
-          <Placeholder>
-            Enter boxes 4 and 6 from your W-2 to see if you&apos;re owed money.
-          </Placeholder>
-        ) : (
-          <FicaResultView output={output} />
-        )}
-      </section>
-    </div>
+              <Checkbox checked={statusChanged} onChange={setStatusChanged}>
+                My visa type changed during {taxYear} (for example, OPT to H-1B)
+              </Checkbox>
+            </>
+          )}
+        </form>
+
+        <section className="lg:sticky lg:top-6 lg:self-start">
+          {awaiting ? (
+            <Placeholder>
+              Enter boxes 4 and 6 from your W-2 to see if you&apos;re owed money.
+            </Placeholder>
+          ) : (
+            <FicaResultView output={output} />
+          )}
+        </section>
+      </div>
+      {!awaiting && output.result === "exempt" && output.refundEstimate > 0 && (
+        <div className="mt-4">
+          <RefundPacket
+            taxYear={taxYear}
+            visaLabel={VISA_LABEL[visa]}
+            jobLabel={JOB_LABEL[job]}
+            socialSecurityWithheld={parseMoney(ss)}
+            medicareWithheld={parseMoney(medicare)}
+          />
+        </div>
+      )}
+    </>
   );
 }
+
+const VISA_LABEL: Record<FicaVisa, string> = {
+  f1: "F-1",
+  j1_student: "J-1",
+  m1: "M-1",
+  j1_scholar: "J-1",
+  dependent: "dependent",
+  h1b_other: "work",
+};
+
+const JOB_LABEL: Record<FicaJob, string> = {
+  opt: "OPT",
+  cpt: "CPT",
+  on_campus: "on-campus work",
+  unauthorized: "work",
+};
 
 function FicaResultView({ output }: { output: ReturnType<typeof checkFica> }) {
   const view = {
