@@ -81,6 +81,18 @@
       "answer": "Accounts over $50,000 must be reported on FinCEN Form 114.",
       "sources": ["exceeded $10,000 at any time during the calendar year"],
       "ok": false
+    },
+    {
+      "id": "prov-13",
+      "answer": "File Form 8843 even with no income [1][4][6].",
+      "sources": ["Form 8843 is required for exempt individuals."],
+      "ok": true
+    },
+    {
+      "id": "prov-14",
+      "answer": "You need at least 45 days [4].",
+      "sources": ["You must be present at least 31 days."],
+      "ok": false
     }
   ]
 }
