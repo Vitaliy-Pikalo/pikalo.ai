@@ -21,3 +21,24 @@ jobs:
       - name: Evals (gate)
         run: npm run eval
       - run: npm run build
+
+  infra:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            infra/package-lock.json
+      # The Lambda bundles lib/ingest from the app, so both installs are needed.
+      - run: npm ci
+      - run: npm ci
+        working-directory: infra
+      - run: npm run typecheck
+        working-directory: infra
+      - name: CDK assertions (synth + bundle)
+        run: npm test
+        working-directory: infra

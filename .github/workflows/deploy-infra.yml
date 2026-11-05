@@ -1,0 +1,36 @@
+name: Deploy infra
+
+# Manual only. Uses GitHub OIDC → the GithubDeployRole from the Pikalo stack,
+# so there are no AWS keys in GitHub. The first deploy has to be run locally
+# (that's what creates the role); set the repo variable AWS_DEPLOY_ROLE_ARN after.
+on:
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    if: ${{ vars.AWS_DEPLOY_ROLE_ARN != '' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            infra/package-lock.json
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: us-east-1
+      - run: npm ci
+      - run: npm ci
+        working-directory: infra
+      - run: npm test
+        working-directory: infra
+      - run: npx cdk deploy --require-approval never
+        working-directory: infra
