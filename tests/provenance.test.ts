@@ -16,6 +16,28 @@ describe("extractNumbers", () => {
     expect(n).toEqual([]);
   });
 
+  it("ignores list and step markers in the formats models actually use", () => {
+    // Seen live: Nova numbered FBAR steps and the "4" was blocked.
+    for (const t of [
+      "1) Gather statements\n4) File online",
+      "**4.** File online",
+      "- 4. File online",
+      "Step 4: file online",
+      "step 4 is filing",
+      "#### 4. File online",
+    ]) {
+      expect(
+        extractNumbers(t).map((n) => n.raw),
+        t,
+      ).toEqual([]);
+    }
+  });
+
+  it("still catches real quantities that look like markers", () => {
+    expect(extractNumbers("You have 4 months to file.").map((n) => n.raw)).toEqual(["4"]);
+    expect(extractNumbers("It costs $4.").map((n) => n.raw)).toEqual(["$4"]);
+  });
+
   it("ignores ordinal list markers and tax years", () => {
     const n = extractNumbers("1. Email payroll for 2026.\n2. Mail it.");
     expect(n).toEqual([]);
