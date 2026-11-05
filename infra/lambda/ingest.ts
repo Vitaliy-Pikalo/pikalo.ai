@@ -8,8 +8,14 @@
  */
 
 import { GetObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
-import { BedrockRuntimeClient, InvokeModelCommand } from "@aws-sdk/client-bedrock-runtime";
-import { GetSecretValueCommand, SecretsManagerClient } from "@aws-sdk/client-secrets-manager";
+import {
+  BedrockRuntimeClient,
+  InvokeModelCommand,
+} from "@aws-sdk/client-bedrock-runtime";
+import {
+  GetSecretValueCommand,
+  SecretsManagerClient,
+} from "@aws-sdk/client-secrets-manager";
 import { CORPUS } from "../../lib/ingest/corpus";
 import {
   EMBEDDING_DIMENSIONS,
@@ -38,9 +44,14 @@ async function supabaseConfig() {
     // fall through to the error below
   }
   if (!value.SUPABASE_URL || !value.SUPABASE_SERVICE_ROLE_KEY) {
-    throw new Error("Supabase secret is missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY");
+    throw new Error(
+      "Supabase secret is missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY",
+    );
   }
-  return { url: value.SUPABASE_URL as string, key: value.SUPABASE_SERVICE_ROLE_KEY as string };
+  return {
+    url: value.SUPABASE_URL as string,
+    key: value.SUPABASE_SERVICE_ROLE_KEY as string,
+  };
 }
 
 export async function handler() {
@@ -65,7 +76,9 @@ export async function handler() {
     },
     async lastHash(docId) {
       try {
-        const obj = await s3.send(new GetObjectCommand({ Bucket: BUCKET, Key: `latest/${docId}.txt` }));
+        const obj = await s3.send(
+          new GetObjectCommand({ Bucket: BUCKET, Key: `latest/${docId}.txt` }),
+        );
         return (await obj.Body?.transformToString())?.trim() ?? null;
       } catch (e) {
         if ((e as { name?: string }).name === "NoSuchKey") return null;
@@ -81,7 +94,9 @@ export async function handler() {
           ContentType: "text/html; charset=utf-8",
         }),
       );
-      await s3.send(new PutObjectCommand({ Bucket: BUCKET, Key: `latest/${docId}.txt`, Body: hash }));
+      await s3.send(
+        new PutObjectCommand({ Bucket: BUCKET, Key: `latest/${docId}.txt`, Body: hash }),
+      );
     },
     async embed(text) {
       const res = await bedrock.send(
@@ -89,7 +104,11 @@ export async function handler() {
           modelId: MODEL_ID,
           contentType: "application/json",
           accept: "application/json",
-          body: JSON.stringify({ inputText: text, dimensions: EMBEDDING_DIMENSIONS, normalize: true }),
+          body: JSON.stringify({
+            inputText: text,
+            dimensions: EMBEDDING_DIMENSIONS,
+            normalize: true,
+          }),
         }),
       );
       return JSON.parse(new TextDecoder().decode(res.body)).embedding as number[];
@@ -109,7 +128,10 @@ export async function handler() {
       }
     },
     async deleteStale(docId, before) {
-      const q = new URLSearchParams({ doc_id: `eq.${docId}`, updated_at: `lt.${before}` });
+      const q = new URLSearchParams({
+        doc_id: `eq.${docId}`,
+        updated_at: `lt.${before}`,
+      });
       const res = await fetch(`${db.url}/rest/v1/passages?${q}`, {
         method: "DELETE",
         headers: { ...headers, Prefer: "return=minimal" },
@@ -123,7 +145,9 @@ export async function handler() {
   console.log(JSON.stringify({ event: "ingest_complete", results }));
   const failed = results.filter((r) => r.status === "failed");
   if (failed.length) {
-    throw new Error(`Ingestion failed for: ${failed.map((f) => `${f.docId} (${f.error})`).join(", ")}`);
+    throw new Error(
+      `Ingestion failed for: ${failed.map((f) => `${f.docId} (${f.error})`).join(", ")}`,
+    );
   }
   return results;
 }
