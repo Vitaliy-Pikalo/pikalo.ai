@@ -50,6 +50,7 @@ export interface AskResult {
   answer: string;
   citations: Citation[];
   toolCalls: ToolCallRecord[];
+  /** For blocked answers: short snippets around each unverifiable number. */
   unsupported: string[];
   model: string;
   usage: { inputTokens: number; outputTokens: number };
@@ -222,7 +223,13 @@ export async function ask(question: string, deps: AskDeps): Promise<AskResult> {
       "blocked",
       BLOCKED_ANSWER,
       passages,
-      check.unsupported.map((n) => n.raw),
+      // A short window around each blocked number, so logs show *why*
+      // (e.g. a list marker the guard misread) without storing the draft.
+      check.unsupported.map((n) =>
+        answer
+          .slice(Math.max(0, n.index - 20), n.index + n.raw.length + 12)
+          .replace(/\s+/g, " "),
+      ),
     );
   }
   return result("answered", answer, passages);

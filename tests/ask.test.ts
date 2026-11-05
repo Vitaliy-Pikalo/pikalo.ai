@@ -111,7 +111,8 @@ describe("ask", () => {
     ]);
     const r = await ask("what is the limit?", d);
     expect(r.status).toBe("blocked");
-    expect(r.unsupported).toContain("$9,999");
+    expect(r.unsupported[0]).toContain("$9,999");
+    expect(r.unsupported[0]).toContain("limit is still");
     expect(r.answer).not.toContain("9,999");
     expect(converse).toHaveBeenCalledTimes(2);
     expect(JSON.stringify(converse.mock.calls[1][0].messages.at(-1))).toContain("$9,999");
