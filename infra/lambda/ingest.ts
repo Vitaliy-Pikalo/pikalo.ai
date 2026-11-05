@@ -17,6 +17,7 @@ import {
   SecretsManagerClient,
 } from "@aws-sdk/client-secrets-manager";
 import { CORPUS } from "../../lib/ingest/corpus";
+import { supabaseHeaders } from "../../lib/ingest/supabase-headers";
 import {
   EMBEDDING_DIMENSIONS,
   ingestCorpus,
@@ -56,11 +57,7 @@ async function supabaseConfig() {
 
 export async function handler() {
   const db = await supabaseConfig();
-  const headers = {
-    apikey: db.key,
-    Authorization: `Bearer ${db.key}`,
-    "Content-Type": "application/json",
-  };
+  const headers = supabaseHeaders(db.key);
 
   const deps: IngestDeps = {
     async fetchHtml(url) {
