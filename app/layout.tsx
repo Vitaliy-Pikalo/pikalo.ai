@@ -24,16 +24,25 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className={`${publicSans.variable} h-full antialiased`}>
       <body className="flex min-h-full flex-col">
-        <header className="mx-auto flex w-full max-w-5xl items-center justify-between px-4 py-5 sm:px-6">
+        <header className="mx-auto flex w-full max-w-5xl items-start justify-between gap-6 px-4 py-5 sm:px-6">
           <Link href="/" className="text-lg font-bold tracking-tight">
             pikalo
           </Link>
-          <nav className="flex gap-5 text-sm text-slate">
+          <nav
+            aria-label="Main"
+            className="flex flex-wrap justify-end gap-x-4 gap-y-1 text-sm text-slate"
+          >
             <Link href="/check" className="hover:text-ink">
-              Residency checker
+              Residency
             </Link>
-            <Link href="/#waitlist" className="hover:text-ink">
-              Join waitlist
+            <Link href="/fica" className="hover:text-ink">
+              FICA refund
+            </Link>
+            <Link href="/roth" className="hover:text-ink">
+              Roth IRA
+            </Link>
+            <Link href="/traps" className="hover:text-ink">
+              Money traps
             </Link>
           </nav>
         </header>
