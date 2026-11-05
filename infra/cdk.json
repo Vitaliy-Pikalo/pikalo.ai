@@ -1,0 +1,9 @@
+{
+  "app": "npx tsx bin/app.ts",
+  "context": {
+    "vercelTeamSlug": "pikalovitaliy-9642s-projects",
+    "vercelProject": "pikalo",
+    "githubRepo": "Vitaliy-Pikalo/pikalo.ai",
+    "createGithubOidcProvider": true
+  }
+}
