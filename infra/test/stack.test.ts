@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import { App } from "aws-cdk-lib";
 import { Match, Template } from "aws-cdk-lib/assertions";
-import { EMBEDDING_MODEL_ID, PikaloStack } from "../lib/pikalo-stack";
+import { CHAT_MODELS, EMBEDDING_MODEL_ID, PikaloStack } from "../lib/pikalo-stack";
 
 let t: Template; // default: no OIDC (what the real account deploys)
 let withOidc: Template;
@@ -102,9 +102,8 @@ describe("archive permissions", () => {
 });
 
 describe("least-privilege Bedrock access", () => {
-  it("only ever allows InvokeModel on the Titan embedding model", () => {
-    const policies = t.findResources("AWS::IAM::Policy");
-    const bedrockStatements = Object.values(policies).flatMap((p) =>
+  const bedrockStatements = () =>
+    Object.values(t.findResources("AWS::IAM::Policy")).flatMap((p) =>
       (
         p.Properties.PolicyDocument.Statement as {
           Action: string | string[];
@@ -112,13 +111,39 @@ describe("least-privilege Bedrock access", () => {
         }[]
       ).filter((s) => [s.Action].flat().some((a) => a.startsWith("bedrock:"))),
     );
-    expect(bedrockStatements.length).toBe(2); // ingest + embed Lambdas
-    for (const s of bedrockStatements) {
+
+  it("only ever allows InvokeModel, never on wildcard resources", () => {
+    const statements = bedrockStatements();
+    expect(statements.length).toBe(3); // ingest embed, gateway embed, gateway chat
+    for (const s of statements) {
       expect(s.Action).toBe("bedrock:InvokeModel");
-      expect(JSON.stringify(s.Resource)).toContain(EMBEDDING_MODEL_ID);
       expect(JSON.stringify(s.Resource)).not.toContain("*");
     }
     expect(MODEL_ARN).toContain("titan-embed-text-v2");
+  });
+
+  it("limits chat to the allowlisted Nova models and their US profile regions", () => {
+    const chat = bedrockStatements().find((s) =>
+      JSON.stringify(s.Resource).includes("inference-profile"),
+    )!;
+    const text = JSON.stringify(chat.Resource);
+    for (const m of CHAT_MODELS) {
+      expect(text).toContain(`inference-profile/us.${m}`);
+      for (const r of ["us-east-1", "us-east-2", "us-west-2"]) {
+        expect(text).toContain(`bedrock:${r}::foundation-model/${m}`);
+      }
+    }
+    expect(text).not.toMatch(/anthropic|claude|opus/i);
+  });
+
+  it("passes the same allowlist to the gateway Lambda", () => {
+    t.hasResourceProperties("AWS::Lambda::Function", {
+      Environment: {
+        Variables: Match.objectLike({
+          CHAT_MODEL_ALLOWLIST: CHAT_MODELS.map((m) => `us.${m}`).join(","),
+        }),
+      },
+    });
   });
 });
 
@@ -179,7 +204,7 @@ describe("signed embed service", () => {
   it("exposes the embed Lambda through a function URL", () => {
     t.hasResourceProperties("AWS::Lambda::Url", { AuthType: "NONE" });
     t.hasResourceProperties("AWS::Lambda::Function", {
-      Timeout: 10,
+      Timeout: 30,
       Environment: {
         Variables: Match.objectLike({ SIGNING_SECRET_ARN: Match.anyValue() }),
       },
