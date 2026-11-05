@@ -5,7 +5,7 @@ const app = new App();
 const ctx = (key: string) => app.node.tryGetContext(key);
 
 new PikaloStack(app, "Pikalo", {
-  env: { account: process.env.CDK_DEFAULT_ACCOUNT, region: "us-east-1" },
+  env: { account: process.env.CDK_DEFAULT_ACCOUNT, region: ctx("region") ?? "us-east-2" },
   description: "Pikalo IRS ingestion pipeline and OIDC roles",
   vercelTeamSlug: ctx("vercelTeamSlug"),
   vercelProject: ctx("vercelProject"),
