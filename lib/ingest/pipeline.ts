@@ -56,7 +56,11 @@ export async function ingestDoc(doc: CorpusDoc, deps: IngestDeps): Promise<Inges
       return { docId: doc.id, status: "skipped_unchanged", chunks: 0, hash };
     }
 
-    const chunks: Chunk[] = chunkSections(doc, htmlToSections(html));
+    // Ids are content hashes, so repeated boilerplate collides; Postgres rejects
+    // the same id twice in one upsert, so keep the first.
+    const chunks: Chunk[] = [
+      ...new Map(chunkSections(doc, htmlToSections(html)).map((c) => [c.id, c])).values(),
+    ];
     if (chunks.length < MIN_CHUNKS) {
       // A page that suddenly has no content is more likely a block page or a
       // redesign than a real change; keep the old passages.
