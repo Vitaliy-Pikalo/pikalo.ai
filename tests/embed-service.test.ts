@@ -126,3 +126,22 @@ describe("embed client", () => {
     ).rejects.toThrow(/dimensions/);
   });
 });
+
+describe("embed client secret handling", () => {
+  it("ignores surrounding whitespace in the signing secret", async () => {
+    const fetchFn = vi.fn(async (_url: string, init: RequestInit) => {
+      const { handler } = makeHandler();
+      const res = await handler(
+        event(init.body as string, init.headers as Record<string, string>),
+      );
+      return new Response(res.body, { status: res.statusCode });
+    });
+    const v = await embedQuery("q", {
+      url: "https://e",
+      secret: `  ${SECRET}\r\n`,
+      fetchFn,
+      now: () => NOW,
+    });
+    expect(v).toHaveLength(EMBEDDING_DIMENSIONS);
+  });
+});
