@@ -24,8 +24,20 @@ describe("embed request signing", () => {
 
   it("rejects replays outside the time window, in both directions", () => {
     const { timestamp, signature } = signRequest(SECRET, BODY, NOW);
-    const late = verifyRequest(SECRET, BODY, timestamp, signature, NOW + MAX_SKEW_SECONDS + 1);
-    const early = verifyRequest(SECRET, BODY, timestamp, signature, NOW - MAX_SKEW_SECONDS - 1);
+    const late = verifyRequest(
+      SECRET,
+      BODY,
+      timestamp,
+      signature,
+      NOW + MAX_SKEW_SECONDS + 1,
+    );
+    const early = verifyRequest(
+      SECRET,
+      BODY,
+      timestamp,
+      signature,
+      NOW - MAX_SKEW_SECONDS - 1,
+    );
     expect(late).toEqual({ ok: false, reason: "stale" });
     expect(early).toEqual({ ok: false, reason: "stale" });
   });

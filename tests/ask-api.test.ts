@@ -87,6 +87,51 @@ describe("POST /api/ask handler", () => {
     log.mockRestore();
   });
 
+  it("queues blocked answers for review and never returns the draft", async () => {
+    const record = vi.fn(async () => {});
+    const blocked = {
+      ...ok,
+      status: "blocked" as const,
+      answer: "held back",
+      unsupported: ["$7,000"],
+      draft: "Up to $7,000.",
+    };
+    const res = await createAskHandler({ run: vi.fn(async () => blocked), record })(
+      req({ question: "single, $60,000, Roth?" }),
+    );
+    const body = await res.json();
+    expect(body.answer).toBe("held back");
+    expect(JSON.stringify(body)).not.toContain("Up to $7,000");
+    expect(record).toHaveBeenCalledWith(
+      expect.objectContaining({
+        question: "single, $60,000, Roth?",
+        draft: "Up to $7,000.",
+      }),
+    );
+  });
+
+  it("still answers when the review queue is down", async () => {
+    const err = vi.spyOn(console, "error").mockImplementation(() => {});
+    const record = vi.fn(async () => {
+      throw new Error("db down");
+    });
+    const blocked = { ...ok, status: "blocked" as const, draft: "d" };
+    const res = await createAskHandler({ run: vi.fn(async () => blocked), record })(
+      req({ question: "q" }),
+    );
+    expect(res.status).toBe(200);
+    expect(JSON.stringify(err.mock.calls)).toContain("queue_failed");
+    err.mockRestore();
+  });
+
+  it("doesn't queue answered questions", async () => {
+    const record = vi.fn(async () => {});
+    await createAskHandler({ run: vi.fn(async () => ok), record })(
+      req({ question: "q" }),
+    );
+    expect(record).not.toHaveBeenCalled();
+  });
+
   it("never logs the question text", async () => {
     const log = vi.spyOn(console, "log").mockImplementation(() => {});
     await createAskHandler({ run: vi.fn(async () => ok) })(

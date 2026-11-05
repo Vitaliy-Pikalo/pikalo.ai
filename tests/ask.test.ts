@@ -112,6 +112,7 @@ describe("ask", () => {
     const r = await ask("what is the limit?", d);
     expect(r.status).toBe("blocked");
     expect(r.unsupported[0]).toContain("$9,999");
+    expect(r.draft).toBe("The limit is still $9,999.");
     expect(r.unsupported[0]).toContain("limit is still");
     expect(r.answer).not.toContain("9,999");
     expect(converse).toHaveBeenCalledTimes(2);
@@ -247,6 +248,7 @@ describe("tool-required guard", () => {
     );
     expect(r.status).toBe("blocked");
     expect(r.answer).not.toContain("7,000");
+    expect(r.draft).toContain("$7,000");
   });
 
   it("nudges toward the right calculator even when the answer has no numbers", async () => {

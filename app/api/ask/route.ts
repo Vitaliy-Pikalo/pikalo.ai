@@ -2,6 +2,7 @@ import { ask } from "@/lib/assistant/ask";
 import { createAskHandler } from "@/lib/assistant/api";
 import { converse, embedQuery } from "@/lib/assistant/embed-client";
 import { retrievePassages } from "@/lib/assistant/retrieval";
+import { recordWithheld } from "@/lib/assistant/review-queue";
 import { createMcpToolRunner } from "@/lib/assistant/tools";
 
 // Up to 4 model calls plus embedding and retrieval.
@@ -19,4 +20,5 @@ export const POST = createAskHandler({
       tools,
       modelId: MODEL_ID,
     }),
+  record: (item) => recordWithheld(item),
 });
