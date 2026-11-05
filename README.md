@@ -27,6 +27,15 @@ npm test                     # unit tests
 npm run build                # production build
 ```
 
+## Deployment
+
+Hosted on Vercel. Every push to `main` deploys to production, and GitHub Actions runs lint, typecheck, tests and build in parallel. Required environment variables (set in the Vercel project):
+
+| Variable                   | Purpose                                             |
+| -------------------------- | --------------------------------------------------- |
+| `SUPABASE_URL`             | Supabase project URL                                |
+| `SUPABASE_PUBLISHABLE_KEY` | Publishable key; the table's RLS allows insert-only |
+
 ## Roadmap
 
 - Citation-grounded assistant (retrieval over IRS publications and state revenue guidance) with an evaluation set for answer and citation accuracy
