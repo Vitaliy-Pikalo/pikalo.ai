@@ -5,6 +5,8 @@ U.S. money, explained for your first years here. Pikalo is a financial education
 ## What's here today
 
 - **Tax residency checker** (`/check`): determines whether someone is likely a resident or nonresident alien for U.S. federal tax purposes, using the green card test and the substantial presence test from [IRS Publication 519](https://www.irs.gov/publications/p519). It handles the exempt-individual rules for F/J/M/Q students and J/Q teachers and trainees. Cases it can't decide reliably (dual-status years, the closer connection exception, the student 5-year extension) are flagged rather than guessed. It runs entirely in the browser.
+- **Ask Pikalo** (`/ask`): an AI tutor that answers U.S. tax questions from IRS publications (RAG over 1,491 passages), with every number either cited or computed by the calculators below through an MCP server. Answers that can't be verified are withheld.
+- **FICA refund check** (`/fica`), **Roth IRA calculator** (`/roth`) and **money traps** (`/traps`).
 - **Waitlist**: email signup stored in Supabase Postgres with row-level security (public role can insert, never read).
 
 ## Design decisions
@@ -37,6 +39,31 @@ Hosted on Vercel. Every push to `main` deploys to production, and GitHub Actions
 | `SUPABASE_PUBLISHABLE_KEY` | Publishable key; the table's RLS allows insert-only |
 | `EMBED_URL`                | `EmbedUrl` output of the CDK stack                  |
 | `EMBED_SIGNING_SECRET`     | Value of the `EmbedSigningSecret` secret            |
+
+## How the assistant works
+
+```
+question → embed (Titan v2) → top-6 IRS passages (pgvector)
+         → Nova (Bedrock Converse) with MCP tools: residency, FICA, Roth
+         → guards → answer with [n] citations, or withheld
+```
+
+Two deterministic guards run on every answer (`lib/assistant/ask.ts`):
+
+1. **Tool-required.** If the user gives their own figures on a calculator's topic (W-2 amounts, income for a Roth, days in the U.S.), the answer must come from that calculator. The model gets one nudge; an answer that still states numbers without the tool is withheld.
+2. **Number provenance.** Every quantity in the answer must appear in a retrieved passage, a tool result or the question (`lib/assistant/provenance.ts`). One repair attempt, then the answer is withheld.
+
+Why both: in evals, a model answered a 2026 Roth question with $7,000 (the 2025 limit). That number _was_ in a retrieved source, so provenance alone passed it; the tool-required guard catches it.
+
+### Evals
+
+- `npm run eval` (CI gate, every push): 33 calculator cases and 14 provenance cases, 100% required.
+- `npm run eval:assistant -- --base https://pikalo.org` (live): 11 end-to-end questions covering tool use, retrieval facts, out-of-scope, prompt injection and invented-penalty bait. Deterministic scoring, no model grading.
+
+| Model      | Live eval          | Cost per answer (approx.) |
+| ---------- | ------------------ | ------------------------- |
+| Nova Lite  | 11/11              | ~$0.001                   |
+| Nova Micro | see commit history | ~$0.0003                  |
 
 ## AWS pipeline (`infra/`)
 
