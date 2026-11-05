@@ -35,21 +35,25 @@ Hosted on Vercel. Every push to `main` deploys to production, and GitHub Actions
 | -------------------------- | --------------------------------------------------- |
 | `SUPABASE_URL`             | Supabase project URL                                |
 | `SUPABASE_PUBLISHABLE_KEY` | Publishable key; the table's RLS allows insert-only |
+| `EMBED_URL`                | `EmbedUrl` output of the CDK stack                  |
+| `EMBED_SIGNING_SECRET`     | Value of the `EmbedSigningSecret` secret            |
 
-## AWS ingestion pipeline (`infra/`)
+## AWS pipeline (`infra/`)
 
-A CDK stack (TypeScript) that keeps the assistant's IRS knowledge base current:
+A CDK stack (TypeScript, us-east-2) that keeps the assistant's IRS knowledge base current and embeds questions at query time:
 
 ```
-EventBridge (weekly) → Lambda → fetch IRS page → S3 archive (versioned)
-                              → chunk → Bedrock Titan v2 embeddings (1024-d)
-                              → Supabase pgvector (upsert, then drop stale rows)
+EventBridge (weekly) → Ingest Lambda → fetch IRS page → S3 archive (versioned)
+                                     → chunk → Bedrock Titan v2 embeddings (1024-d)
+                                     → Supabase pgvector (upsert, then drop stale rows)
+
+Vercel app → HMAC-signed POST → Embed Lambda (function URL) → Bedrock Titan v2
 ```
 
-- **No long-lived AWS keys.** Vercel and GitHub Actions both assume IAM roles over OIDC, scoped to this project (Vercel: production/preview only; GitHub: `main` only).
-- **Least privilege.** Both Bedrock grants are `InvokeModel` on the single Titan embedding model ARN. Asserted in `infra/test/stack.test.ts`.
+- **No long-lived AWS keys.** Vercel holds only an HMAC signing key. Each request signs `timestamp.body`; the Lambda rejects bad signatures and anything outside a 5-minute window (replay protection) before calling Bedrock. OIDC roles for Vercel and GitHub exist behind `-c enableOidc=true` for accounts whose org policy allows OIDC providers.
+- **Least privilege.** Every Bedrock grant is `InvokeModel` on the single Titan embedding model ARN; the S3 archive is append-only. Asserted in `infra/test/stack.test.ts`.
 - **Safe re-ingest.** Unchanged pages are skipped by hash; an empty or failed page never deletes existing passages; the S3 archive is written last so a failed run retries.
-- **Supabase service key lives only in Secrets Manager**, read by the Lambda; it never touches Vercel.
+- **The Supabase service key lives only in Secrets Manager**, read by the ingest Lambda; it never touches Vercel.
 
 ```bash
 cd infra
