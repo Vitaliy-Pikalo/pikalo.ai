@@ -1,5 +1,5 @@
 /**
- * Server-side client the Vercel app uses to embed a user's question.
+ * Server-side client for the signed model gateway (embed + converse).
  * Env: EMBED_URL, EMBED_SIGNING_SECRET. Never import from client components.
  */
 
@@ -8,6 +8,7 @@ import {
   SIGNATURE_HEADER,
   TIMESTAMP_HEADER,
 } from "@/lib/assistant/embed-auth";
+import type { ConverseRequest, ConverseResponse } from "@/lib/assistant/embed-handler";
 import { EMBEDDING_DIMENSIONS } from "@/lib/ingest/pipeline";
 
 export interface EmbedClientOptions {
@@ -18,15 +19,16 @@ export interface EmbedClientOptions {
   timeoutMs?: number;
 }
 
-export async function embedQuery(
-  text: string,
-  opts: EmbedClientOptions = {},
-): Promise<number[]> {
+async function callGateway(
+  payload: unknown,
+  opts: EmbedClientOptions,
+  defaultTimeoutMs: number,
+) {
   const url = opts.url ?? process.env.EMBED_URL;
   const secret = opts.secret ?? process.env.EMBED_SIGNING_SECRET;
   if (!url || !secret) throw new Error("EMBED_URL and EMBED_SIGNING_SECRET must be set");
 
-  const body = JSON.stringify({ text });
+  const body = JSON.stringify(payload);
   const { timestamp, signature } = signRequest(secret, body, opts.now?.());
   const res = await (opts.fetchFn ?? fetch)(url, {
     method: "POST",
@@ -36,13 +38,28 @@ export async function embedQuery(
       [SIGNATURE_HEADER]: signature,
     },
     body,
-    signal: AbortSignal.timeout(opts.timeoutMs ?? 10_000),
+    signal: AbortSignal.timeout(opts.timeoutMs ?? defaultTimeoutMs),
   });
   if (!res.ok) throw new Error(`embed service returned ${res.status}`);
+  return res.json();
+}
 
-  const embedding = (await res.json()).embedding;
+export async function embedQuery(
+  text: string,
+  opts: EmbedClientOptions = {},
+): Promise<number[]> {
+  const embedding = (await callGateway({ text }, opts, 10_000)).embedding;
   if (!Array.isArray(embedding) || embedding.length !== EMBEDDING_DIMENSIONS) {
     throw new Error(`embed service returned wrong dimensions`);
   }
   return embedding;
+}
+
+export async function converse(
+  req: ConverseRequest,
+  opts: EmbedClientOptions = {},
+): Promise<ConverseResponse> {
+  const out = await callGateway({ op: "converse", ...req }, opts, 30_000);
+  if (!out?.output?.message) throw new Error("model gateway returned no message");
+  return out as ConverseResponse;
 }
