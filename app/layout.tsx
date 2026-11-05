@@ -40,10 +40,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <main className="flex-1">{children}</main>
         <footer className="mx-auto w-full max-w-5xl border-t border-line px-4 py-8 text-sm leading-relaxed text-slate sm:px-6">
           <p className="max-w-[68ch]">
-            Pikalo is an educational tool. It explains how U.S. tax rules work
-            and cites IRS sources, but it isn&apos;t tax, legal or investment
-            advice and doesn&apos;t replace a tax professional. For free help
-            filing, look for an{" "}
+            Pikalo is an educational tool. It explains how U.S. tax rules work and cites
+            IRS sources, but it isn&apos;t tax, legal or investment advice and
+            doesn&apos;t replace a tax professional. For free help filing, look for an{" "}
             <a
               className="underline underline-offset-2 hover:text-ink"
               href="https://www.irs.gov/individuals/free-tax-return-preparation-for-qualifying-taxpayers"

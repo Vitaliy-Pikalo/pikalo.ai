@@ -10,7 +10,11 @@ import {
 
 const STATUS_OPTIONS: { value: ResidencyStatus; label: string; hint: string }[] = [
   { value: "student", label: "Student", hint: "F-1, J-1 student, M-1 or Q" },
-  { value: "teacher_trainee", label: "Teacher, researcher or trainee", hint: "J-1 or Q, not a student" },
+  {
+    value: "teacher_trainee",
+    label: "Teacher, researcher or trainee",
+    hint: "J-1 or Q, not a student",
+  },
   { value: "other", label: "Work or other visa", hint: "H-1B, L-1, O-1, TN, B-1/B-2" },
   { value: "green_card", label: "Green card holder", hint: "Lawful permanent resident" },
   { value: "citizen", label: "U.S. citizen", hint: "" },
@@ -89,7 +93,9 @@ export default function ResidencyChecker() {
                 />
                 <span>
                   <span className="font-medium">{opt.label}</span>
-                  {opt.hint && <span className="ml-2 text-sm text-slate">{opt.hint}</span>}
+                  {opt.hint && (
+                    <span className="ml-2 text-sm text-slate">{opt.hint}</span>
+                  )}
                 </span>
               </label>
             ))}
@@ -137,8 +143,8 @@ export default function ResidencyChecker() {
         {needsDays && (
           <div className="space-y-3">
             <Checkbox checked={statusChanged} onChange={setStatusChanged}>
-              My visa type changed between {taxYear - 2} and {taxYear} (for example, F-1 to
-              H-1B)
+              My visa type changed between {taxYear - 2} and {taxYear} (for example, F-1
+              to H-1B)
             </Checkbox>
             {needsFirstYear && (
               <Checkbox checked={priorHistory} onChange={setPriorHistory}>
@@ -158,7 +164,9 @@ export default function ResidencyChecker() {
 
         {status !== "citizen" && status !== "green_card" && (
           <fieldset>
-            <legend className="font-semibold">Days you were physically in the U.S.</legend>
+            <legend className="font-semibold">
+              Days you were physically in the U.S.
+            </legend>
             <p className="mt-1 text-sm text-slate">
               Any part of a day counts as a full day. Check your I-94 travel history if
               you&apos;re unsure.
@@ -191,7 +199,12 @@ export default function ResidencyChecker() {
           </div>
         </section>
       ) : (
-        <Result output={output} taxYear={taxYear} status={status} resultId={`${id}-result`} />
+        <Result
+          output={output}
+          taxYear={taxYear}
+          status={status}
+          resultId={`${id}-result`}
+        />
       )}
     </div>
   );
@@ -239,7 +252,8 @@ function Result({
     },
   }[output.result];
 
-  const showMeter = output.test === "substantial_presence" && output.result !== "needs_review";
+  const showMeter =
+    output.test === "substantial_presence" && output.result !== "needs_review";
 
   return (
     <section className="lg:sticky lg:top-6 lg:self-start">
@@ -284,7 +298,8 @@ function Result({
             </a>
           </span>
         ))}
-        . {status === "student" || status === "teacher_trainee"
+        .{" "}
+        {status === "student" || status === "teacher_trainee"
           ? "Your school's international office can confirm your status."
           : ""}
       </p>
@@ -303,8 +318,18 @@ function DayMeter({
   const { current, prior1, prior2 } = output.countedDays;
   const parts = [
     { label: `${taxYear}`, detail: "every day", value: current, color: "bg-meter-1" },
-    { label: `${taxYear - 1}`, detail: "⅓ of days", value: prior1 / 3, color: "bg-meter-2" },
-    { label: `${taxYear - 2}`, detail: "⅙ of days", value: prior2 / 6, color: "bg-meter-3" },
+    {
+      label: `${taxYear - 1}`,
+      detail: "⅓ of days",
+      value: prior1 / 3,
+      color: "bg-meter-2",
+    },
+    {
+      label: `${taxYear - 2}`,
+      detail: "⅙ of days",
+      value: prior2 / 6,
+      color: "bg-meter-3",
+    },
   ];
   // Scale so 183 sits at 61% of the bar; totals above 300 fill the bar.
   const scale = 300;
@@ -358,7 +383,9 @@ function DayMeter({
           </div>
         ))}
       </dl>
-      {(output.exemptYears.current || output.exemptYears.prior1 || output.exemptYears.prior2) && (
+      {(output.exemptYears.current ||
+        output.exemptYears.prior1 ||
+        output.exemptYears.prior2) && (
         <p className="mt-3 text-sm text-slate">
           Exempt years count as 0:{" "}
           {[

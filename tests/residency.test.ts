@@ -1,9 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  checkResidency,
-  daysInYear,
-  type ResidencyInput,
-} from "@/lib/residency";
+import { checkResidency, daysInYear, type ResidencyInput } from "@/lib/residency";
 
 const base: ResidencyInput = {
   taxYear: 2026,
@@ -187,9 +183,7 @@ describe("input validation", () => {
   it("rejects more days than the calendar year has", () => {
     expect(run({ taxYear: 2026, daysCurrent: 366 }).result).toBe("invalid");
     // 2024 was a leap year, so prior2 for 2026 can be 366
-    expect(run({ taxYear: 2026, daysPrior2: 366 }).result).not.toBe(
-      "invalid",
-    );
+    expect(run({ taxYear: 2026, daysPrior2: 366 }).result).not.toBe("invalid");
   });
 
   it("rejects a first year in status after the tax year", () => {

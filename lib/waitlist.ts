@@ -14,9 +14,12 @@ export const waitlistSchema = z.object({
     .toLowerCase()
     .max(254, "That email is too long.")
     .pipe(z.email({ error: "Enter a valid email address." })),
-  segment: z.enum(["international_student", "recent_immigrant", "us_young_adult", "other"], {
-    message: "Pick the option that fits you best.",
-  }),
+  segment: z.enum(
+    ["international_student", "recent_immigrant", "us_young_adult", "other"],
+    {
+      message: "Pick the option that fits you best.",
+    },
+  ),
   school: z.string().trim().max(120, "School name is too long.").optional(),
   // Honeypot: real people never see or fill this field.
   hp_field: z.string().max(0).optional(),

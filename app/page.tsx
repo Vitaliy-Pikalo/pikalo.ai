@@ -24,9 +24,9 @@ export default function Home() {
           Your first years of U.S. money, explained.
         </h1>
         <p className="mt-5 max-w-[60ch] text-lg leading-relaxed text-slate">
-          Taxes, investing and retirement accounts work differently when you&apos;re new to
-          the U.S. Pikalo explains the rules that apply to you, with the IRS source next to
-          every answer.
+          Taxes, investing and retirement accounts work differently when you&apos;re new
+          to the U.S. Pikalo explains the rules that apply to you, with the IRS source
+          next to every answer.
         </p>
       </section>
 
@@ -35,13 +35,16 @@ export default function Home() {
         className="border-y border-line bg-surface/60 py-12"
       >
         <div className="mx-auto max-w-5xl px-4 sm:px-6">
-          <h2 id="checker-heading" className="text-2xl font-bold tracking-tight sm:text-3xl">
+          <h2
+            id="checker-heading"
+            className="text-2xl font-bold tracking-tight sm:text-3xl"
+          >
             Are you a resident or nonresident for taxes?
           </h2>
           <p className="mt-2 mb-8 max-w-[64ch] leading-relaxed text-slate">
-            Your visa alone doesn&apos;t decide this. The IRS also counts your days in the U.S.
-            over three years. Your status decides which forms you file and which software you can
-            use. Filing as the wrong one is a common mistake.
+            Your visa alone doesn&apos;t decide this. The IRS also counts your days in the
+            U.S. over three years. Your status decides which forms you file and which
+            software you can use. Filing as the wrong one is a common mistake.
           </p>
           <ResidencyChecker />
         </div>
@@ -62,8 +65,8 @@ export default function Home() {
       <section id="waitlist" className="mx-auto max-w-5xl scroll-mt-6 px-4 pb-16 sm:px-6">
         <h2 className="text-2xl font-bold tracking-tight">Get early access</h2>
         <p className="mt-2 mb-6 max-w-[60ch] leading-relaxed text-slate">
-          We&apos;re launching for the 2027 tax season. Join the waitlist to get the assistant
-          first and help decide what we build.
+          We&apos;re launching for the 2027 tax season. Join the waitlist to get the
+          assistant first and help decide what we build.
         </p>
         <WaitlistForm />
       </section>
