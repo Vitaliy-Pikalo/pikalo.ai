@@ -25,7 +25,8 @@ async function callGateway(
   defaultTimeoutMs: number,
 ) {
   const url = opts.url ?? process.env.EMBED_URL;
-  const secret = opts.secret ?? process.env.EMBED_SIGNING_SECRET;
+  // Trim: a pasted env value with a trailing newline would break every signature.
+  const secret = (opts.secret ?? process.env.EMBED_SIGNING_SECRET)?.trim();
   if (!url || !secret) throw new Error("EMBED_URL and EMBED_SIGNING_SECRET must be set");
 
   const body = JSON.stringify(payload);
