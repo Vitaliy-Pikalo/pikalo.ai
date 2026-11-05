@@ -35,8 +35,16 @@ export interface ResidencyInput {
    * Required for "student" and "teacher_trainee".
    */
   firstYearInStatus?: number;
-  /** Teacher/trainee only: was the person ever in the U.S. on F/J/M/Q before? */
+  /** Was the person in the U.S. as a student, teacher or trainee before this status? */
   priorExemptHistory?: boolean;
+  /** Teacher/trainee only: a foreign employer paid all compensation every year here. */
+  foreignEmployer?: boolean;
+  /**
+   * Did the person's visa type change during the 3 years being counted
+   * (e.g. F-1 → H-1B)? Exempt days then cover only part of a year, which
+   * this tool doesn't model, so the result becomes "needs_review".
+   */
+  statusChanged?: boolean;
 }
 
 export type FlagCode =
@@ -44,7 +52,8 @@ export type FlagCode =
   | "student_extended_exemption"
   | "prior_exempt_history"
   | "dual_status"
-  | "status_assumption";
+  | "status_assumption"
+  | "other_excluded_days";
 
 export interface Flag {
   code: FlagCode;
@@ -60,6 +69,7 @@ export type ResidencyResult =
   | "citizen"
   | "resident"
   | "nonresident"
+  | "needs_review"
   | "invalid";
 
 export interface ResidencyOutput {
@@ -88,6 +98,8 @@ export const SOURCES: Source[] = [
 const STUDENT_EXEMPT_YEARS = 5;
 /** Teachers/trainees: not exempt if exempt in any part of 2 of the prior 6 years. */
 const TEACHER_EXEMPT_YEARS = 2;
+/** With all pay from a foreign employer: still exempt if exempt in ≤3 of the prior 6. */
+const TEACHER_FOREIGN_EMPLOYER_EXEMPT_YEARS = 4;
 
 const SPT_WEIGHTED_THRESHOLD = 183;
 const SPT_CURRENT_MINIMUM = 31;
@@ -155,6 +167,7 @@ function isExemptInYear(
   status: ResidencyStatus,
   year: number,
   firstYear: number | undefined,
+  foreignEmployer = false,
 ): boolean {
   if (firstYear === undefined || year < firstYear) return false;
   const yearsInStatusBefore = year - firstYear; // full calendar years before `year`
@@ -167,7 +180,10 @@ function isExemptInYear(
     for (let y = firstYear; y <= year; y++) {
       let count = 0;
       for (let p = y - 6; p < y; p++) if (exempt.get(p)) count++;
-      exempt.set(y, count < TEACHER_EXEMPT_YEARS);
+      const limit = foreignEmployer
+        ? TEACHER_FOREIGN_EMPLOYER_EXEMPT_YEARS
+        : TEACHER_EXEMPT_YEARS;
+      exempt.set(y, count < limit);
     }
     return exempt.get(year) ?? false;
   }
@@ -209,10 +225,25 @@ export function checkResidency(input: ResidencyInput): ResidencyOutput {
   const { taxYear, status, firstYearInStatus } = input;
   out.test = "substantial_presence";
 
+  out.flags.push({
+    code: "other_excluded_days",
+    message:
+      "Some days never count: regular commutes from Canada or Mexico, under 24 hours in transit between two foreign places, days you couldn't leave because of a medical condition, and days as an immediate family member of an exempt individual or diplomat. This tool doesn't subtract them for you. The first-year choice to be treated as a resident isn't covered either.",
+  });
+
+  if (input.statusChanged) {
+    out.result = "needs_review";
+    out.reasons.push(
+      `Your visa type changed between ${taxYear - 2} and ${taxYear}. Only days spent in a non-exempt status (like H-1B) count, so each year has to be split at the date your status changed. This tool doesn't split years yet.`,
+      "To do it yourself: for each year, count only the days outside F, J, M or Q status, then add this year's days + ⅓ of last year's + ⅙ of the year before. You need at least 31 days this year and 183 in total.",
+    );
+    return out;
+  }
+
   out.exemptYears = {
-    current: isExemptInYear(status, taxYear, firstYearInStatus),
-    prior1: isExemptInYear(status, taxYear - 1, firstYearInStatus),
-    prior2: isExemptInYear(status, taxYear - 2, firstYearInStatus),
+    current: isExemptInYear(status, taxYear, firstYearInStatus, input.foreignEmployer),
+    prior1: isExemptInYear(status, taxYear - 1, firstYearInStatus, input.foreignEmployer),
+    prior2: isExemptInYear(status, taxYear - 2, firstYearInStatus, input.foreignEmployer),
   };
 
   out.countedDays = {
@@ -230,7 +261,7 @@ export function checkResidency(input: ResidencyInput): ResidencyOutput {
   if (status === "student" || status === "teacher_trainee") {
     out.flags.push({
       code: "status_assumption",
-      message: `This assumes you've been in ${status === "student" ? "F/J/M/Q student" : "J/Q teacher or trainee"} status continuously since ${firstYearInStatus}. If your visa type changed, the result may differ.`,
+      message: `This assumes you've been in ${status === "student" ? "F/J/M/Q student" : "J/Q teacher or trainee"} status since ${firstYearInStatus} and were in the U.S. for at least part of every calendar year since. A full calendar year spent outside the U.S. doesn't use up an exempt year, so the result may differ.`,
     });
     if (out.exemptYears.current) {
       out.reasons.push(
@@ -247,11 +278,13 @@ export function checkResidency(input: ResidencyInput): ResidencyOutput {
     });
   }
 
-  if (status === "teacher_trainee" && input.priorExemptHistory) {
+  if ((status === "teacher_trainee" || status === "student") && input.priorExemptHistory) {
     out.flags.push({
       code: "prior_exempt_history",
       message:
-        "Earlier time in the U.S. on F, J, M or Q status can shorten or remove the teacher/trainee exemption. This tool can't account for that — check Pub 519 or a tax professional.",
+        status === "student"
+          ? "Years you spent in the U.S. as a teacher or trainee count toward the student 5-year limit. This tool only counts years since your first year as a student, so your exemption may end sooner."
+          : "Years you spent in the U.S. as a student, teacher or trainee before this visa count toward the 2-of-6-years limit. This tool only counts years since your first year in this status, so your exemption may end sooner.",
     });
   }
 
@@ -280,7 +313,7 @@ export function checkResidency(input: ResidencyInput): ResidencyOutput {
     out.flags.push({
       code: "closer_connection",
       message:
-        "Because you were present fewer than 183 days this year, you may qualify for the closer connection exception (Form 8840) if your tax home and closer ties are in another country.",
+        "Because you were present fewer than 183 days this year, you may qualify for the closer connection exception if your tax home and closer ties are in another country. You'd need to file Form 8840 on time, and it's generally not available if you've applied for or taken steps toward a green card.",
     });
   }
 

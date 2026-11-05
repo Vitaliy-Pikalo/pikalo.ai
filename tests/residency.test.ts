@@ -231,3 +231,62 @@ describe("teacher/trainee exemption cycle", () => {
     expect(exemptIn(year)).toBe(expected);
   });
 });
+
+describe("review fixes", () => {
+  it("returns needs_review when visa type changed (F-1 → H-1B)", () => {
+    const r = run({
+      status: "other",
+      statusChanged: true,
+      daysCurrent: 365,
+      daysPrior1: 365,
+      daysPrior2: 365,
+    });
+    expect(r.result).toBe("needs_review");
+    expect(r.reasons.join(" ")).toMatch(/split/);
+  });
+
+  it("teacher paid by a foreign employer stays exempt through year 4", () => {
+    const exemptIn = (taxYear: number) =>
+      checkResidency({
+        taxYear,
+        status: "teacher_trainee",
+        firstYearInStatus: 2023,
+        foreignEmployer: true,
+        daysCurrent: 300,
+        daysPrior1: 0,
+        daysPrior2: 0,
+      }).exemptYears.current;
+    expect(exemptIn(2025)).toBe(true); // 2 prior exempt
+    expect(exemptIn(2026)).toBe(true); // 3 prior exempt → still ≤3
+    expect(exemptIn(2027)).toBe(false); // 4 prior exempt
+  });
+
+  it("flags earlier teacher/trainee history for students", () => {
+    const r = run({
+      status: "student",
+      firstYearInStatus: 2024,
+      priorExemptHistory: true,
+      daysCurrent: 300,
+    });
+    expect(r.flags.map((f) => f.code)).toContain("prior_exempt_history");
+  });
+
+  it("year 5 vs year 6 for a student, with prior-year days", () => {
+    const base5 = {
+      status: "student" as const,
+      daysCurrent: 300,
+      daysPrior1: 300,
+      daysPrior2: 300,
+    };
+    // first 2022: 2026 is year 5 → all exempt
+    expect(run({ ...base5, firstYearInStatus: 2022 }).weightedDays).toBe(0);
+    // first 2021: 2026 is year 6 → only current year counts
+    expect(run({ ...base5, firstYearInStatus: 2021 }).weightedDays).toBe(300);
+  });
+
+  it("always shows the other-excluded-days note for the SPT", () => {
+    expect(run({ daysCurrent: 100 }).flags.map((f) => f.code)).toContain(
+      "other_excluded_days",
+    );
+  });
+});
