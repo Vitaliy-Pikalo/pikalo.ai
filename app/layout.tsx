@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import localFont from "next/font/local";
 import Link from "next/link";
 import AssistantDock from "@/components/AssistantDock";
-import SiteNav from "@/components/SiteNav";
+import SiteHeader from "@/components/SiteHeader";
+import { TOOLS } from "@/lib/nav";
 import "./globals.css";
 
 const publicSans = localFont({
@@ -26,35 +27,71 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className={`${publicSans.variable} h-full antialiased`}>
       <body className="flex min-h-full flex-col">
-        <header className="mx-auto flex w-full max-w-5xl flex-col gap-3 px-4 py-5 sm:flex-row sm:items-start sm:justify-between sm:gap-6 sm:px-6">
-          <Link href="/" className="shrink-0 text-lg font-bold tracking-tight">
-            pikalo
-          </Link>
-          <SiteNav />
-        </header>
+        <SiteHeader />
         <main className="flex-1">{children}</main>
-        <footer className="mx-auto w-full max-w-5xl border-t border-line px-4 pt-8 pb-24 text-sm leading-relaxed text-slate sm:px-6">
-          <p className="max-w-[68ch]">
-            Pikalo is an educational tool. It explains how U.S. tax rules work and cites
-            IRS sources, but it isn&apos;t tax, legal or investment advice and
-            doesn&apos;t replace a tax professional. For free help filing, look for an{" "}
-            <a
-              className="underline underline-offset-2 hover:text-ink"
-              href="https://www.irs.gov/individuals/free-tax-return-preparation-for-qualifying-taxpayers"
-            >
-              IRS VITA clinic
-            </a>{" "}
-            or ask your school&apos;s international office.
-          </p>
-          <p className="mt-3">
-            © 2026 Pikalo ·{" "}
-            <Link href="/privacy" className="underline underline-offset-2">
-              Privacy
-            </Link>
+        <footer className="mt-16 border-t border-line bg-surface print:hidden">
+          <div className="mx-auto grid max-w-6xl gap-10 px-4 pt-12 pb-10 sm:px-6 md:grid-cols-[1.4fr_1fr_1fr]">
+            <div>
+              <Link href="/" className="text-lg font-bold tracking-tight">
+                pikalo
+              </Link>
+              <p className="mt-3 max-w-[48ch] text-sm leading-relaxed text-slate">
+                Pikalo explains U.S. tax rules and cites IRS sources. It isn&apos;t tax,
+                legal or investment advice. For free help filing, find an{" "}
+                <a
+                  className="underline underline-offset-2 hover:text-ink"
+                  href="https://www.irs.gov/individuals/free-tax-return-preparation-for-qualifying-taxpayers"
+                >
+                  IRS VITA clinic
+                </a>{" "}
+                or ask your school&apos;s international office.
+              </p>
+            </div>
+            <FooterList
+              title="Calculators"
+              links={[
+                ...TOOLS.map((t) => ({ href: t.href, label: t.label })),
+                { href: "/traps", label: "Money traps" },
+              ]}
+            />
+            <FooterList
+              title="Pikalo"
+              links={[
+                { href: "/ask", label: "Ask a tax question" },
+                { href: "/account", label: "My Pikalo" },
+                { href: "/privacy", label: "Privacy" },
+              ]}
+            />
+          </div>
+          <p className="mx-auto max-w-6xl border-t border-line px-4 pt-6 pb-24 text-sm text-slate sm:px-6">
+            © 2026 Pikalo
           </p>
         </footer>
         <AssistantDock />
       </body>
     </html>
+  );
+}
+
+function FooterList({
+  title,
+  links,
+}: {
+  title: string;
+  links: { href: string; label: string }[];
+}) {
+  return (
+    <div>
+      <h2 className="text-sm font-semibold">{title}</h2>
+      <ul className="mt-3 space-y-2 text-sm text-slate">
+        {links.map((l) => (
+          <li key={l.href}>
+            <Link href={l.href} className="hover:text-ink">
+              {l.label}
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }

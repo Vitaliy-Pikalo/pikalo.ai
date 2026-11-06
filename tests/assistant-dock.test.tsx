@@ -5,7 +5,6 @@ let pathname = "/fica";
 vi.mock("next/navigation", () => ({ usePathname: () => pathname }));
 
 import AssistantDock from "@/components/AssistantDock";
-import SiteNav from "@/components/SiteNav";
 
 afterEach(() => {
   cleanup();
@@ -51,27 +50,5 @@ describe("AssistantDock", () => {
     pathname = p;
     render(<AssistantDock />);
     expect(screen.queryByRole("button", { name: /ask pikalo/i })).toBeNull();
-  });
-});
-
-describe("SiteNav", () => {
-  it("groups the calculators and marks the current page", () => {
-    pathname = "/roth";
-    render(<SiteNav />);
-    expect(
-      screen.getByRole("link", { name: "Roth IRA" }).getAttribute("aria-current"),
-    ).toBe("page");
-    expect(
-      screen.getByRole("link", { name: "Ask" }).getAttribute("aria-current"),
-    ).toBeNull();
-    expect(screen.getByText("Calculators")).toBeTruthy();
-  });
-
-  it("links to the saved-answers page", () => {
-    pathname = "/";
-    render(<SiteNav />);
-    expect(screen.getByRole("link", { name: "My Pikalo" }).getAttribute("href")).toBe(
-      "/account",
-    );
   });
 });
