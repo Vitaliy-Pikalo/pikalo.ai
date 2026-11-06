@@ -11,6 +11,8 @@ describe("privacy page", () => {
     expect(text).toMatch(/Never the text of your\s+question/);
     expect(text).toMatch(/keyed hash of your IP address/);
     expect(text).toMatch(/for 2 days/);
+    expect(text).toMatch(/unless you sign in and choose to save it/);
+    expect(text).toMatch(/Only you\s+can read them/);
   });
 
   it("links the AWS sources for its Bedrock claims and a contact address", () => {

@@ -19,7 +19,7 @@ export default function PrivacyPage() {
     <div className="mx-auto max-w-5xl px-4 pt-8 pb-16 sm:px-6">
       <PageIntro title="Privacy">
         Pikalo is built to help with money questions without collecting the details that
-        make people targets. Last updated November 5, 2026.
+        make people targets. Last updated November 6, 2026.
       </PageIntro>
 
       <div className="max-w-[72ch]">
@@ -31,7 +31,8 @@ export default function PrivacyPage() {
           </li>
           <li>
             The calculators run in your browser. What you type into them isn&apos;t sent
-            to us.
+            to us unless you sign in and choose to save it, and you can delete it any
+            time.
           </li>
           <li>
             Questions you ask the assistant are used to answer you and aren&apos;t stored,
@@ -49,6 +50,13 @@ export default function PrivacyPage() {
           <li>
             <strong>Sign-in:</strong> your email address, to send one-time sign-in links.
             A cookie keeps you signed in.
+          </li>
+          <li>
+            <strong>Saved answers (optional):</strong> if you sign in and press Save, we
+            keep the calculator answers you saved: your visa type, arrival year, days in
+            the U.S., job type, W-2 amounts, filing status and income figures. Only you
+            can read them. Delete them any time on the My Pikalo page; deleting your
+            account deletes them too.
           </li>
           <li>
             <strong>Held-back answers:</strong> if the assistant can&apos;t verify an
@@ -75,8 +83,8 @@ export default function PrivacyPage() {
             <strong>Vercel</strong> hosts the website.
           </li>
           <li>
-            <strong>Supabase</strong> stores the waitlist, sign-in accounts and held-back
-            answers, in the United States.
+            <strong>Supabase</strong> stores the waitlist, sign-in accounts, saved answers
+            and held-back answers, in the United States.
           </li>
           <li>
             <strong>Amazon Web Services (Bedrock)</strong> runs the AI model, in U.S.
@@ -100,7 +108,8 @@ export default function PrivacyPage() {
 
         <h2 className={h2}>Your choices</h2>
         <p className={p}>
-          To see or delete what we hold about you (waitlist entry or account), email{" "}
+          To see or delete what we hold about you (waitlist entry, account or saved
+          answers), email{" "}
           <a className={a} href={`mailto:${CONTACT}`}>
             {CONTACT}
           </a>{" "}
