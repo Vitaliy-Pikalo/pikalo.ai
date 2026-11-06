@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useState, type FormEvent, type ReactNode } from "react";
+import { Fragment, useId, useState, type FormEvent, type ReactNode } from "react";
 
 interface Citation {
   n: number;
@@ -50,7 +50,9 @@ function withCitations(text: string, citations: Citation[]): ReactNode[] {
   });
 }
 
-export default function AskBox() {
+export default function AskBox({ variant = "page" }: { variant?: "page" | "panel" }) {
+  const panel = variant === "panel";
+  const inputId = useId();
   const [question, setQuestion] = useState("");
   const [asked, setAsked] = useState("");
   const [result, setResult] = useState<AskResponse | null>(null);
@@ -82,14 +84,17 @@ export default function AskBox() {
   }
 
   return (
-    <div className="max-w-[72ch]">
-      <form onSubmit={submit} className="rounded-lg border border-line bg-surface p-4">
-        <label htmlFor="question" className="font-semibold">
+    <div className={panel ? "" : "max-w-[72ch]"}>
+      <form
+        onSubmit={submit}
+        className={panel ? "" : "rounded-lg border border-line bg-surface p-4"}
+      >
+        <label htmlFor={inputId} className="font-semibold">
           Your question
         </label>
         <textarea
-          id="question"
-          rows={3}
+          id={inputId}
+          rows={panel ? 2 : 3}
           maxLength={1000}
           value={question}
           onChange={(e) => setQuestion(e.target.value)}
@@ -117,7 +122,7 @@ export default function AskBox() {
         <div className="mt-6">
           <p className="text-sm font-semibold text-slate">Try one of these</p>
           <ul className="mt-2 space-y-2">
-            {EXAMPLES.map((ex) => (
+            {(panel ? EXAMPLES.slice(0, 2) : EXAMPLES).map((ex) => (
               <li key={ex}>
                 <button
                   type="button"
