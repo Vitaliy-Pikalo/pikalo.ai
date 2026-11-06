@@ -61,6 +61,32 @@ describe("POST /api/ask handler", () => {
     expect((await h(req({ question: "q" }, "8.8.8.8"))).status).toBe(200);
   });
 
+  it("uses the shared limiter's verdict when it has one", async () => {
+    const run = vi.fn(async () => ok);
+    const limit = vi.fn(async () => ({
+      ok: false,
+      scope: "global" as const,
+      retryAfter: 3600,
+    }));
+    const res = await createAskHandler({ run, limit })(req({ question: "q" }));
+    expect(res.status).toBe(429);
+    expect(res.headers.get("retry-after")).toBe("3600");
+    expect((await res.json()).error).toMatch(/busy/i);
+    expect(run).not.toHaveBeenCalled();
+  });
+
+  it("falls back to the local limiter if the shared one fails", async () => {
+    const err = vi.spyOn(console, "error").mockImplementation(() => {});
+    const run = vi.fn(async () => ok);
+    const limit = vi.fn(async () => {
+      throw new Error("db down");
+    });
+    const res = await createAskHandler({ run, limit })(req({ question: "q" }));
+    expect(res.status).toBe(200);
+    expect(JSON.stringify(err.mock.calls)).toContain("rate_limit_failed");
+    err.mockRestore();
+  });
+
   it("frees the limit after a minute", async () => {
     let t = 0;
     const h = createAskHandler({ run: vi.fn(async () => ok), now: () => t });

@@ -5,6 +5,7 @@
  */
 
 import { MAX_QUESTION_CHARS, type AskResult } from "@/lib/assistant/ask";
+import type { LimitVerdict } from "@/lib/assistant/rate-limit";
 import type { WithheldAnswer } from "@/lib/assistant/review-queue";
 
 export const RATE_LIMIT_PER_MINUTE = 8;
@@ -14,8 +15,16 @@ export interface AskHandlerDeps {
   run(question: string): Promise<AskResult>;
   /** Saves withheld answers for human review (redaction happens inside). */
   record?(item: WithheldAnswer): Promise<void>;
+  /** Shared (cross-instance) limiter; null = not configured. */
+  limit?(ip: string): Promise<LimitVerdict | null>;
   now?: () => number;
 }
+
+const LIMIT_MESSAGES: Record<string, string> = {
+  minute: "Too many questions. Please wait a minute.",
+  day: "You've reached today's question limit. Please come back tomorrow.",
+  global: "Pikalo is very busy today. Please try again tomorrow.",
+};
 
 export function createAskHandler(deps: AskHandlerDeps) {
   // Per-instance limiter: a cheap first line of defense. Serverless instances
@@ -55,6 +64,22 @@ export function createAskHandler(deps: AskHandlerDeps) {
     recent.push(t);
     hits.set(ip, recent);
     if (hits.size > 5000) hits.clear(); // bound memory
+
+    // Shared limiter across instances; if it's down, the local one above
+    // still bounds each instance.
+    if (deps.limit) {
+      try {
+        const v = await deps.limit(ip);
+        if (v && !v.ok) {
+          return Response.json(
+            { error: LIMIT_MESSAGES[v.scope ?? "minute"] ?? LIMIT_MESSAGES.minute },
+            { status: 429, headers: { "retry-after": String(v.retryAfter ?? 60) } },
+          );
+        }
+      } catch (e) {
+        console.error(JSON.stringify({ event: "rate_limit_failed", error: String(e) }));
+      }
+    }
 
     const started = now();
     try {
