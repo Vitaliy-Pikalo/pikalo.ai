@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import ResidencyChecker from "@/components/ResidencyChecker";
+import { getMyFacts } from "@/lib/profile/load";
 
 export const metadata: Metadata = {
   title: "U.S. tax residency checker",
@@ -15,10 +17,18 @@ export default function CheckPage() {
       </h1>
       <p className="mt-3 mb-10 max-w-[64ch] leading-relaxed text-slate">
         Answer a few questions to see whether you&apos;re likely a resident or nonresident
-        alien under the green card and substantial presence tests. Nothing you enter
-        leaves your browser.
+        alien under the green card and substantial presence tests. Nothing you enter is
+        sent to us unless you sign in and save it.
       </p>
-      <ResidencyChecker />
+      <Suspense fallback={<ResidencyChecker />}>
+        <WithSaved />
+      </Suspense>
     </div>
   );
+}
+
+/** Signed in: start from saved answers. Signed out: the plain calculator. */
+async function WithSaved() {
+  const me = await getMyFacts();
+  return <ResidencyChecker initial={me.facts} signedIn={me.signedIn} />;
 }
