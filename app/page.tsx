@@ -1,3 +1,4 @@
+import Link from "next/link";
 import SituationPicker from "@/components/SituationPicker";
 import WaitlistForm from "@/components/WaitlistForm";
 
@@ -14,20 +15,36 @@ export default function Home() {
           figures, and links the official source for every answer. The calculators are
           free and run in your browser, so nothing you enter is saved.
         </p>
+        <div className="mt-8 flex flex-wrap gap-3">
+          <Link
+            href="/ask"
+            className="rounded-md bg-ink px-5 py-3 font-semibold text-surface hover:opacity-90"
+          >
+            Ask a tax question
+          </Link>
+          <a
+            href="#start"
+            className="rounded-md border border-ink px-5 py-3 font-semibold hover:bg-surface"
+          >
+            Find the tools for my situation
+          </a>
+        </div>
       </section>
 
-      <section className="border-y border-line bg-surface/60 py-12">
+      <section
+        id="start"
+        className="scroll-mt-6 border-y border-line bg-surface/60 py-12"
+      >
         <div className="mx-auto max-w-5xl px-4 sm:px-6">
           <SituationPicker />
         </div>
       </section>
 
       <section id="waitlist" className="mx-auto max-w-5xl scroll-mt-6 px-4 py-14 sm:px-6">
-        <h2 className="text-2xl font-bold tracking-tight">Get the assistant first</h2>
+        <h2 className="text-2xl font-bold tracking-tight">Get tax-season reminders</h2>
         <p className="mt-2 mb-6 max-w-[60ch] leading-relaxed text-slate">
-          We&apos;re building an assistant that answers your tax and retirement questions
-          using IRS publications, with the source next to every answer. It launches for
-          the 2027 tax season. Join to get early access and tell us what to build.
+          One email when W-2s arrive and one before the April deadline, with what to check
+          for your situation. You can also tell us what to build next.
         </p>
         <WaitlistForm />
       </section>

@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
 import Link from "next/link";
+import AssistantDock from "@/components/AssistantDock";
+import SiteNav from "@/components/SiteNav";
 import "./globals.css";
 
 const publicSans = localFont({
@@ -24,33 +26,14 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className={`${publicSans.variable} h-full antialiased`}>
       <body className="flex min-h-full flex-col">
-        <header className="mx-auto flex w-full max-w-5xl items-start justify-between gap-6 px-4 py-5 sm:px-6">
-          <Link href="/" className="text-lg font-bold tracking-tight">
+        <header className="mx-auto flex w-full max-w-5xl flex-col gap-3 px-4 py-5 sm:flex-row sm:items-start sm:justify-between sm:gap-6 sm:px-6">
+          <Link href="/" className="shrink-0 text-lg font-bold tracking-tight">
             pikalo
           </Link>
-          <nav
-            aria-label="Main"
-            className="flex flex-wrap justify-end gap-x-4 gap-y-1 text-sm text-slate"
-          >
-            <Link href="/ask" className="font-semibold text-ink hover:text-stamp">
-              Ask
-            </Link>
-            <Link href="/check" className="hover:text-ink">
-              Residency
-            </Link>
-            <Link href="/fica" className="hover:text-ink">
-              FICA refund
-            </Link>
-            <Link href="/roth" className="hover:text-ink">
-              Roth IRA
-            </Link>
-            <Link href="/traps" className="hover:text-ink">
-              Money traps
-            </Link>
-          </nav>
+          <SiteNav />
         </header>
         <main className="flex-1">{children}</main>
-        <footer className="mx-auto w-full max-w-5xl border-t border-line px-4 py-8 text-sm leading-relaxed text-slate sm:px-6">
+        <footer className="mx-auto w-full max-w-5xl border-t border-line px-4 pt-8 pb-24 text-sm leading-relaxed text-slate sm:px-6">
           <p className="max-w-[68ch]">
             Pikalo is an educational tool. It explains how U.S. tax rules work and cites
             IRS sources, but it isn&apos;t tax, legal or investment advice and
@@ -70,6 +53,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             </Link>
           </p>
         </footer>
+        <AssistantDock />
       </body>
     </html>
   );
