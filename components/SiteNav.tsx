@@ -49,6 +49,7 @@ export default function SiteNav() {
         ))}
       </div>
       <NavLink href="/traps" label="Money traps" />
+      <NavLink href="/account" label="My Pikalo" />
     </nav>
   );
 }
