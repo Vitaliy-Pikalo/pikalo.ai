@@ -7,6 +7,8 @@ import {
   formatDays,
   type ResidencyStatus,
 } from "@/lib/residency";
+import SaveBar from "@/components/SaveBar";
+import { toResidencyStatus, type Facts, type StatusKind } from "@/lib/profile/facts";
 
 const STATUS_OPTIONS: { value: ResidencyStatus; label: string; hint: string }[] = [
   { value: "student", label: "Student", hint: "F-1, J-1 student, M-1 or Q" },
@@ -31,12 +33,41 @@ function toInt(value: string): number {
   return /^\d+$/.test(v) ? Number(v) : NaN;
 }
 
-export default function ResidencyChecker() {
+// Saving a calculator choice back: the residency groups are broader than visas,
+// so keep the saved visa when it still fits and pick the common one otherwise.
+const KIND_FOR: Record<ResidencyStatus, StatusKind> = {
+  student: "f1",
+  teacher_trainee: "j1_scholar",
+  other: "h1b_other",
+  green_card: "green_card",
+  citizen: "citizen",
+};
+
+const savedDays = (f: Facts, y: number) => {
+  const v = f.days_by_year?.[String(y)];
+  return v === undefined ? "" : String(v);
+};
+
+export default function ResidencyChecker({
+  initial = {},
+  signedIn,
+}: {
+  initial?: Facts;
+  signedIn?: boolean;
+}) {
   const id = useId();
   const [taxYear, setTaxYear] = useState(DEFAULT_TAX_YEAR);
-  const [status, setStatus] = useState<ResidencyStatus>("student");
-  const [days, setDays] = useState({ current: "", prior1: "", prior2: "" });
-  const [firstYear, setFirstYear] = useState(String(DEFAULT_TAX_YEAR - 1));
+  const [status, setStatus] = useState<ResidencyStatus>(
+    initial.status_kind ? toResidencyStatus(initial.status_kind) : "student",
+  );
+  const [days, setDays] = useState({
+    current: savedDays(initial, DEFAULT_TAX_YEAR),
+    prior1: savedDays(initial, DEFAULT_TAX_YEAR - 1),
+    prior2: savedDays(initial, DEFAULT_TAX_YEAR - 2),
+  });
+  const [firstYear, setFirstYear] = useState(
+    String(initial.first_year_in_status ?? DEFAULT_TAX_YEAR - 1),
+  );
   const [priorHistory, setPriorHistory] = useState(false);
   const [foreignEmployer, setForeignEmployer] = useState(false);
   const [statusChanged, setStatusChanged] = useState(false);
@@ -190,6 +221,29 @@ export default function ResidencyChecker() {
             </div>
           </fieldset>
         )}
+        <SaveBar
+          signedIn={signedIn}
+          prefilled={Object.keys(initial).length > 0}
+          from="/check"
+          patch={{
+            status_kind:
+              initial.status_kind && toResidencyStatus(initial.status_kind) === status
+                ? initial.status_kind
+                : KIND_FOR[status],
+            ...(needsFirstYear && /^\d{4}$/.test(firstYear.trim())
+              ? { first_year_in_status: Number(firstYear) }
+              : {}),
+            ...(needsDays
+              ? {
+                  days_by_year: Object.fromEntries(
+                    dayFields
+                      .filter((f) => /^\d+$/.test(days[f.key].trim()))
+                      .map((f) => [String(f.year), Number(days[f.key])]),
+                  ),
+                }
+              : {}),
+          }}
+        />
       </form>
 
       {awaitingInput ? (
