@@ -1,3 +1,4 @@
+import { unstable_rethrow } from "next/navigation";
 import { getViewer } from "@/lib/auth/session";
 import { parseFacts, type Facts } from "@/lib/profile/facts";
 import { createSupabaseServer } from "@/lib/supabase/server";
@@ -11,8 +12,21 @@ export interface MyFacts {
   facts: Facts;
 }
 
-/** The viewer's saved answers (RLS: only their own row). Empty when signed out. */
+/**
+ * The viewer's saved answers (RLS: only their own row). Empty when signed out.
+ * If Supabase is unreachable the calculators still work, just without saving.
+ */
 export async function getMyFacts(): Promise<MyFacts> {
+  try {
+    return await load();
+  } catch (e) {
+    unstable_rethrow(e);
+    console.error("getMyFacts failed", e instanceof Error ? e.message : e);
+    return { signedIn: false, facts: {} };
+  }
+}
+
+async function load(): Promise<MyFacts> {
   const viewer = await getViewer();
   if (!viewer) return { signedIn: false, facts: {} };
   const supabase = await createSupabaseServer();

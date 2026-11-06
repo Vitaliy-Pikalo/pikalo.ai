@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import RothCalculator from "@/components/RothCalculator";
+import { getMyFacts } from "@/lib/profile/load";
 import { PageIntro } from "@/components/ui";
 
 export const metadata: Metadata = {
@@ -16,7 +18,15 @@ export default function RothPage() {
         put in for 2026 depends on your wages, your income and how you file. This uses the
         IRS&apos;s 2026 limits.
       </PageIntro>
-      <RothCalculator />
+      <Suspense fallback={<RothCalculator />}>
+        <WithSaved />
+      </Suspense>
     </div>
   );
+}
+
+/** Signed in: start from saved answers. Signed out: the plain calculator. */
+async function WithSaved() {
+  const me = await getMyFacts();
+  return <RothCalculator initial={me.facts} signedIn={me.signedIn} />;
 }

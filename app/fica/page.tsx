@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import FicaChecker from "@/components/FicaChecker";
+import { getMyFacts } from "@/lib/profile/load";
 import { PageIntro } from "@/components/ui";
 
 export const metadata: Metadata = {
@@ -16,7 +18,15 @@ export default function FicaPage() {
         Medicare tax on campus jobs, CPT or OPT. Payroll systems often take it anyway,
         about 7.65% of every paycheck. Enter your W-2 to see what you can get back.
       </PageIntro>
-      <FicaChecker />
+      <Suspense fallback={<FicaChecker />}>
+        <WithSaved />
+      </Suspense>
     </div>
   );
+}
+
+/** Signed in: start from saved answers. Signed out: the plain calculator. */
+async function WithSaved() {
+  const me = await getMyFacts();
+  return <FicaChecker initial={me.facts} signedIn={me.signedIn} />;
 }
