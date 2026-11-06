@@ -3,6 +3,8 @@
 import { useId, useState } from "react";
 import Link from "next/link";
 import RefundPacket from "@/components/RefundPacket";
+import SaveBar from "@/components/SaveBar";
+import { toFicaVisa, type Facts } from "@/lib/profile/facts";
 import { checkFica, formatUsd, type FicaJob, type FicaVisa } from "@/lib/fica";
 import {
   Checkbox,
@@ -36,15 +38,31 @@ const JOBS: { value: FicaJob; label: string; hint?: string }[] = [
   { value: "unauthorized", label: "Something else", hint: "not approved for my visa" },
 ];
 
-export default function FicaChecker() {
+const money = (n: number | null | undefined) => (n == null ? "" : String(n));
+const amount = (s: string) =>
+  s.trim() === "" || !Number.isFinite(parseMoney(s)) ? undefined : parseMoney(s);
+
+export default function FicaChecker({
+  initial = {},
+  signedIn,
+}: {
+  initial?: Facts;
+  signedIn?: boolean;
+}) {
   const id = useId();
-  const [taxYear, setTaxYear] = useState(2026);
-  const [visa, setVisa] = useState<FicaVisa>("f1");
-  const [job, setJob] = useState<FicaJob>("opt");
-  const [firstYear, setFirstYear] = useState("2025");
-  const [wages, setWages] = useState("");
-  const [ss, setSs] = useState("");
-  const [medicare, setMedicare] = useState("");
+  // A green card or citizenship has no FICA exemption; the closest option is "work visa or green card".
+  const savedVisa = initial.status_kind ? toFicaVisa(initial.status_kind) : null;
+  const [taxYear, setTaxYear] = useState(initial.w2_year ?? 2026);
+  const [visa, setVisa] = useState<FicaVisa>(
+    savedVisa ?? (initial.status_kind ? "h1b_other" : "f1"),
+  );
+  const [job, setJob] = useState<FicaJob>(initial.job ?? "opt");
+  const [firstYear, setFirstYear] = useState(
+    String(initial.first_year_in_status ?? 2025),
+  );
+  const [wages, setWages] = useState(money(initial.wages));
+  const [ss, setSs] = useState(money(initial.ss_withheld));
+  const [medicare, setMedicare] = useState(money(initial.medicare_withheld));
   const [statusChanged, setStatusChanged] = useState(false);
 
   const isStudent = visa === "f1" || visa === "j1_student" || visa === "m1";
@@ -140,6 +158,26 @@ export default function FicaChecker() {
               </Checkbox>
             </>
           )}
+          <SaveBar
+            signedIn={signedIn}
+            prefilled={Object.keys(initial).length > 0}
+            from="/fica"
+            patch={{
+              ...(savedVisa || !initial.status_kind ? { status_kind: visa } : {}),
+              ...(isStudent
+                ? {
+                    job,
+                    ...(/^\d{4}$/.test(firstYear.trim())
+                      ? { first_year_in_status: Number(firstYear) }
+                      : {}),
+                    w2_year: taxYear,
+                    wages: amount(wages),
+                    ss_withheld: amount(ss),
+                    medicare_withheld: amount(medicare),
+                  }
+                : {}),
+            }}
+          />
         </form>
 
         <section className="lg:sticky lg:top-6 lg:self-start">

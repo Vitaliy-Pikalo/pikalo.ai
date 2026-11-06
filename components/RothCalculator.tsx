@@ -13,6 +13,8 @@ import {
   Sources,
   Verdict,
 } from "@/components/ui";
+import SaveBar from "@/components/SaveBar";
+import type { Facts } from "@/lib/profile/facts";
 
 const STATUSES: { value: FilingStatus; label: string }[] = [
   { value: "single", label: "Single" },
@@ -22,14 +24,24 @@ const STATUSES: { value: FilingStatus; label: string }[] = [
   { value: "qualifying_surviving_spouse", label: "Qualifying surviving spouse" },
 ];
 
-export default function RothCalculator() {
+const money = (n: number | null | undefined) => (n == null ? "" : String(n));
+const amount = (s: string) =>
+  s.trim() === "" || !Number.isFinite(parseMoney(s)) ? undefined : parseMoney(s);
+
+export default function RothCalculator({
+  initial = {},
+  signedIn,
+}: {
+  initial?: Facts;
+  signedIn?: boolean;
+}) {
   const id = useId();
-  const [status, setStatus] = useState<FilingStatus>("single");
-  const [age50, setAge50] = useState(false);
-  const [comp, setComp] = useState("");
-  const [magi, setMagi] = useState("");
-  const [magiTouched, setMagiTouched] = useState(false);
-  const [other, setOther] = useState("");
+  const [status, setStatus] = useState<FilingStatus>(initial.filing_status ?? "single");
+  const [age50, setAge50] = useState(initial.age_50_plus ?? false);
+  const [comp, setComp] = useState(money(initial.compensation));
+  const [magi, setMagi] = useState(money(initial.magi));
+  const [magiTouched, setMagiTouched] = useState(initial.magi != null);
+  const [other, setOther] = useState(money(initial.other_ira));
   const [apart, setApart] = useState(false);
   const [spouseComp, setSpouseComp] = useState("");
 
@@ -107,6 +119,18 @@ export default function RothCalculator() {
         <Checkbox checked={age50} onChange={setAge50}>
           I&apos;m 50 or older by the end of 2026
         </Checkbox>
+        <SaveBar
+          signedIn={signedIn}
+          prefilled={Object.keys(initial).length > 0}
+          from="/roth"
+          patch={{
+            filing_status: status,
+            age_50_plus: age50,
+            compensation: amount(comp),
+            magi: magiTouched ? amount(magi) : undefined,
+            other_ira: amount(other),
+          }}
+        />
       </form>
 
       <section className="lg:sticky lg:top-6 lg:self-start">
