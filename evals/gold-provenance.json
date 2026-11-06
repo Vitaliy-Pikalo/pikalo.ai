@@ -93,6 +93,18 @@
       "answer": "You need at least 45 days [4].",
       "sources": ["You must be present at least 31 days."],
       "ok": false
+    },
+    {
+      "id": "prov-15",
+      "answer": "1) Gather your statements\n4) File FinCEN Form 114 online",
+      "sources": ["File the FBAR electronically."],
+      "ok": true
+    },
+    {
+      "id": "prov-16",
+      "answer": "**4.** You have 4 months to file.",
+      "sources": ["File by April 15."],
+      "ok": false
     }
   ]
 }
