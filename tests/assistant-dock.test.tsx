@@ -66,4 +66,12 @@ describe("SiteNav", () => {
     ).toBeNull();
     expect(screen.getByText("Calculators")).toBeTruthy();
   });
+
+  it("links to the saved-answers page", () => {
+    pathname = "/";
+    render(<SiteNav />);
+    expect(screen.getByRole("link", { name: "My Pikalo" }).getAttribute("href")).toBe(
+      "/account",
+    );
+  });
 });

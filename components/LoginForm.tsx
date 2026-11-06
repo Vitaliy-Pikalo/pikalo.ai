@@ -40,7 +40,7 @@ export default function LoginForm() {
           Send a new one.
         </p>
       )}
-      <input type="hidden" name="next" value={params.get("next") ?? "/review"} />
+      <input type="hidden" name="next" value={params.get("next") ?? "/account"} />
       <label className="block">
         <span className="font-semibold">Email</span>
         <input

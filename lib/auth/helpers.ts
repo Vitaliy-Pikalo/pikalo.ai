@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-const DEFAULT_NEXT = "/review";
+const DEFAULT_NEXT = "/account";
 const PRODUCTION_ORIGIN = "https://pikalo.org";
 
 /** Only same-site paths: blocks open redirects like //evil.com or https://evil.com. */

@@ -5,13 +5,13 @@ describe("safeNext (post-login redirect)", () => {
   it.each([
     ["/review", "/review"],
     ["/review?tab=open", "/review?tab=open"],
-    [null, "/review"],
-    ["", "/review"],
-    ["https://evil.example", "/review"],
-    ["//evil.example", "/review"],
-    ["/\\evil.example", "/review"],
-    ["javascript:alert(1)", "/review"],
-    ["review", "/review"],
+    [null, "/account"],
+    ["", "/account"],
+    ["https://evil.example", "/account"],
+    ["//evil.example", "/account"],
+    ["/\\evil.example", "/account"],
+    ["javascript:alert(1)", "/account"],
+    ["review", "/account"],
   ])("%s → %s", (input, expected) => {
     expect(safeNext(input)).toBe(expected);
   });
