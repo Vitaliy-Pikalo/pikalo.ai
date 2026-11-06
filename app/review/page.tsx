@@ -32,7 +32,7 @@ const when = (iso: string) =>
 
 export default function ReviewPage() {
   return (
-    <div className="mx-auto max-w-5xl px-4 pt-8 pb-16 sm:px-6">
+    <div className="mx-auto max-w-6xl px-4 pt-8 pb-16 sm:px-6">
       <PageIntro title="Review queue">
         Answers the assistant drafted but withheld because a guard couldn&apos;t verify
         them. Mark each one: was the guard right, or was the draft actually fine? False

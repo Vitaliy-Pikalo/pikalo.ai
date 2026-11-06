@@ -16,7 +16,7 @@ const a = "underline underline-offset-2 hover:text-stamp";
 
 export default function PrivacyPage() {
   return (
-    <div className="mx-auto max-w-5xl px-4 pt-8 pb-16 sm:px-6">
+    <div className="mx-auto max-w-6xl px-4 pt-8 pb-16 sm:px-6">
       <PageIntro title="Privacy">
         Pikalo is built to help with money questions without collecting the details that
         make people targets. Last updated November 6, 2026.

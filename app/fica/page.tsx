@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 
 export default function FicaPage() {
   return (
-    <div className="mx-auto max-w-5xl px-4 pt-8 pb-16 sm:px-6">
+    <div className="mx-auto max-w-6xl px-4 pt-8 pb-16 sm:px-6">
       <PageIntro title="Were you charged Social Security tax you don't owe?">
         Most nonresident F-1, J-1 and M-1 students don&apos;t owe Social Security or
         Medicare tax on campus jobs, CPT or OPT. Payroll systems often take it anyway,

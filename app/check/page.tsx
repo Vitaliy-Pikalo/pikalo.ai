@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 
 export default function CheckPage() {
   return (
-    <div className="mx-auto max-w-5xl px-4 pt-8 pb-16 sm:px-6">
+    <div className="mx-auto max-w-6xl px-4 pt-8 pb-16 sm:px-6">
       <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
         U.S. tax residency checker
       </h1>

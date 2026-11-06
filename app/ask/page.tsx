@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 
 export default function AskPage() {
   return (
-    <div className="mx-auto max-w-5xl px-4 pt-8 pb-16 sm:px-6">
+    <div className="mx-auto max-w-6xl px-4 pt-8 pb-16 sm:px-6">
       <PageIntro title="Ask Pikalo">
         Ask about U.S. taxes in plain words. Answers come only from IRS publications and
         link to them, and any number about your situation comes from a tested calculator,

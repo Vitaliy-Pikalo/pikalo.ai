@@ -14,7 +14,7 @@ const TAX_YEAR = 2026;
 
 export default function AccountPage() {
   return (
-    <div className="mx-auto max-w-5xl px-4 pt-8 pb-16 sm:px-6">
+    <div className="mx-auto max-w-6xl px-4 pt-8 pb-16 sm:px-6">
       <PageIntro title="My Pikalo">
         Answer once, and the calculators fill themselves in. Each step says which tools it
         unlocks, so you only answer what you need.
