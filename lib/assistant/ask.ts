@@ -234,7 +234,9 @@ export async function ask(question: string, deps: AskDeps): Promise<AskResult> {
   const answerText = () => textOf(res!.output.message);
   const statesNumbers = () => extractNumbers(answerText()).length > 0;
   const asksUser = () => answerText().includes("?");
-  if (required && !usedRequired() && !asksUser()) {
+  // A clarifying question with no numbers is fine; numbers plus a trailing
+  // "Any questions?" is not.
+  if (required && !usedRequired() && (statesNumbers() || !asksUser())) {
     if (calls < MAX_MODEL_CALLS) {
       messages.push({
         role: "user",

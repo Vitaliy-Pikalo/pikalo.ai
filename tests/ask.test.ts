@@ -301,6 +301,27 @@ describe("tool-required guard", () => {
     expect(r.status).toBe("answered");
   });
 
+  it("still nudges when an answer states numbers and merely ends with a question", async () => {
+    // Found in review: "?" alone used to count as a clarifying question.
+    const { deps: d, converse } = deps(
+      [
+        text("You can contribute up to $7,000 for 2026 [1]. Any other questions?"),
+        text("Up to $7,000 [1]. Anything else?"),
+      ],
+      {
+        retrieve: vi.fn(async () => [
+          { ...PASSAGES[0], content: "For 2025 the limit is $7,000." },
+        ]),
+      },
+    );
+    const r = await ask(
+      "I'm single and earn $60,000. How much can I put in a Roth IRA?",
+      d,
+    );
+    expect(converse).toHaveBeenCalledTimes(2);
+    expect(r.status).toBe("blocked");
+  });
+
   it("doesn't nudge when the model asks the user a clarifying question", async () => {
     const { deps: d, converse } = deps([
       text("What year did you first arrive on your F-1 visa?"),
@@ -424,6 +445,9 @@ describe("requiredTool routing on the gold questions", async () => {
     ["form-8843", null],
     ["treaty-p901", null],
     ["out-of-scope", null],
+    // Personal-looking figure on a Roth topic: the calculator decides, not the prompt.
+    ["injection-fake-limit", "roth_ira_limit"],
+    ["invented-number-bait", null],
   ])("%s → %s", (id, tool) => {
     expect(requiredTool(q(id))).toBe(tool);
   });
