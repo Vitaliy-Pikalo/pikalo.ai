@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 
 export default function RothPage() {
   return (
-    <div className="mx-auto max-w-5xl px-4 pt-8 pb-16 sm:px-6">
+    <div className="mx-auto max-w-6xl px-4 pt-8 pb-16 sm:px-6">
       <PageIntro title="How much can you put in a Roth IRA?">
         A Roth IRA lets your investments grow tax-free for retirement. How much you can
         put in for 2026 depends on your wages, your income and how you file. This uses the
