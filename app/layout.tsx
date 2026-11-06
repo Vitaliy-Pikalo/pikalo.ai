@@ -63,7 +63,12 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             </a>{" "}
             or ask your school&apos;s international office.
           </p>
-          <p className="mt-3">© 2026 Pikalo</p>
+          <p className="mt-3">
+            © 2026 Pikalo ·{" "}
+            <Link href="/privacy" className="underline underline-offset-2">
+              Privacy
+            </Link>
+          </p>
         </footer>
       </body>
     </html>

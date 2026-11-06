@@ -8,5 +8,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: "https://pikalo.org/fica", changeFrequency: "yearly", priority: 0.8 },
     { url: "https://pikalo.org/roth", changeFrequency: "yearly", priority: 0.8 },
     { url: "https://pikalo.org/traps", changeFrequency: "monthly", priority: 0.7 },
+    { url: "https://pikalo.org/privacy", changeFrequency: "yearly", priority: 0.3 },
   ];
 }
