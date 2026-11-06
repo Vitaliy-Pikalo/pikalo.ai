@@ -2,6 +2,7 @@ import { ask } from "@/lib/assistant/ask";
 import { createAskHandler } from "@/lib/assistant/api";
 import { converse, embedQuery } from "@/lib/assistant/embed-client";
 import { retrievePassages } from "@/lib/assistant/retrieval";
+import { hitRateLimit } from "@/lib/assistant/rate-limit";
 import { recordWithheld } from "@/lib/assistant/review-queue";
 import { createMcpToolRunner } from "@/lib/assistant/tools";
 
@@ -21,4 +22,5 @@ export const POST = createAskHandler({
       modelId: MODEL_ID,
     }),
   record: (item) => recordWithheld(item),
+  limit: (ip) => hitRateLimit(ip),
 });
