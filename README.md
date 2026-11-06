@@ -64,7 +64,7 @@ Why both: in evals, a model answered a 2026 Roth question with $7,000 (the 2025 
 
 Production runs **Nova Micro**: it tied Nova Lite on the live suite at about 40% lower cost per answer. The decision rule (ship the cheaper model only on a tie) was set before the final run. The model is switchable with `ASSISTANT_MODEL_ID`.
 
-- `npm run eval` (CI gate, every push): 33 calculator cases and 14 provenance cases, 100% required.
+- `npm run eval` (CI gate, every push): 33 calculator cases and 16 provenance cases, 100% required.
 - `npm run eval:assistant -- --base https://pikalo.org` (live): 11 end-to-end questions covering tool use, retrieval facts, out-of-scope, prompt injection and invented-penalty bait. Deterministic scoring, no model grading.
 
 | Model                       | Live eval | Cost per answer (approx.) |
@@ -74,7 +74,8 @@ Production runs **Nova Micro**: it tied Nova Lite on the live suite at about 40%
 
 ## Accounts and the review queue
 
-- **Sign-in:** Supabase Auth magic links (`/login`, PKCE). `proxy.ts` refreshes sessions only on `/review` and `/account`, so public pages stay static.
+- **Sign-in:** Supabase Auth magic links (`/login`, PKCE). `proxy.ts` refreshes sessions only on `/account`, `/review` and the three calculators. Those pages use partial prerendering: the page shell is static and only the saved-answers part is streamed per request.
+- **Saved answers (My Pikalo, `/account`):** a guided form shows which calculator each answer unlocks and what each one still needs. The calculators prefill from it and have a "Save to My Pikalo" button. Data lives in `user_facts`, one row per user, under owner-only RLS (`supabase/tests/user_facts_rls.sql`, 10 checks). No SSNs, ITINs or account numbers. Empty fields never overwrite saved ones, and users can delete everything.
 - **Roles:** `profiles.role` is `user`, `reviewer` or `admin`. Users can read their own role and can't change it.
 - **Review queue** (`/review`, reviewers only): when a guard withholds an answer, `/api/ask` stores the question and draft, with SSNs, ITINs, A-numbers, account numbers and emails removed. It writes through `record_withheld_answer`, an insert-only RPC that checks a shared token inside the database, so the app holds no service-role key. Reviewers can change only status and note; the database stamps who reviewed and when. Rows are deleted after 90 days (pg_cron).
 - **RLS test:** `supabase/tests/review_queue_rls.sql` simulates anon, a user and a reviewer in a rolled-back transaction (15 checks).
