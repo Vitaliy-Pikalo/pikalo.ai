@@ -60,7 +60,8 @@ export default function PrivacyPage() {
           <li>
             <strong>Service logs:</strong> whether an answer was given, which calculators
             ran, how long it took and how many model tokens it used. Never the text of
-            your question.
+            your question. When an answer is held back, the log keeps a few words of the
+            AI&apos;s draft around the number it couldn&apos;t verify.
           </li>
           <li>
             <strong>Abuse limits:</strong> to limit how many questions one device can ask,
