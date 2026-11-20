@@ -1,8 +1,9 @@
 # Ask Pikalo on local Kubernetes
 
 Phase 2 runs the two Phase 1 service images on a free, single-node kind cluster.
-The live Next.js/Vercel app and AWS infrastructure are unchanged. Autoscaling,
-metrics-server, eval Jobs, CI rollout gates and load testing are later phases.
+Phase 3 adds metrics-server and CPU-based answer API autoscaling. The live
+Next.js/Vercel app and AWS infrastructure are unchanged. Eval Jobs, CI rollout
+gates and request load testing are later phases.
 
 ## Concepts for interviews
 
@@ -138,6 +139,95 @@ app changes. Verification was repeated after all kube-system Pods were Ready;
 the repeat passed, with both app Pods at zero restarts. Image loading and
 verification now wait for kube-system Pod readiness. These checks establish local
 functionality; they do not measure production availability or performance.
+
+## Phase 3: metrics-server and answer API autoscaling
+
+Metrics-server collects resource usage from kubelets and exposes it through
+`metrics.k8s.io`. An HPA is a control-plane controller that changes a Deployment's
+replica count from measured utilization. It does not create additional cluster
+nodes. See the [upstream metrics-server documentation](https://github.com/kubernetes-sigs/metrics-server/blob/v0.9.1/README.md)
+and [Kubernetes HPA documentation](https://kubernetes.io/docs/concepts/workloads/autoscaling/horizontal-pod-autoscale/).
+
+The answer HPA uses `autoscaling/v2`, with minimum 1 and maximum 3 replicas. Its
+CPU target is 60% of the existing 100m request: about 60m CPU per Pod, not 60% of
+the laptop or container CPU limit. The calculator stays at one replica. Scale-up
+allows two additional Pods per 30 seconds. Scale-down uses a 60-second
+stabilization window and removes at most one Pod per 30 seconds. These are local
+demo settings to validate behavior, not production sizing recommendations.
+
+`k8s/autoscaling` includes the base manifests and removes `spec.replicas` from
+the answer Deployment so repeated applies do not reset the HPA's decisions.
+After enabling HPA, use `deploy.ps1 -Autoscaling`; the base deployment script
+refuses to reset an HPA-controlled Deployment. The Phase 2 outage verifier also
+refuses to run while HPA is enabled because it manually changes replica counts.
+
+Metrics-server's v0.9.1 release manifest is vendored without modification under
+`k8s/metrics-server/upstream`, with its license and SHA256 recorded alongside it.
+The local Kustomize patch adds `--kubelet-insecure-tls` for kind's kubelet serving
+certificate. Keep that local exception out of a production cluster; use trusted
+kubelet certificates there instead. No Windows or Docker security settings are
+changed.
+
+Reproduce from the repository root after building the Phase 1 service images:
+
+```powershell
+./scripts/k8s/create-cluster.ps1
+try {
+    ./scripts/k8s/load-images.ps1
+    ./scripts/k8s/create-local-secret.ps1 -Fixture
+    ./scripts/k8s/deploy.ps1
+    ./scripts/k8s/enable-autoscaling.ps1
+    ./scripts/k8s/verify-autoscaling.ps1
+} finally {
+    ./scripts/k8s/teardown.ps1
+}
+```
+
+`enable-autoscaling.ps1` validates and installs metrics-server, waits for its
+Deployment and aggregated API, then deploys the autoscaling overlay. Inspect the
+running cluster before teardown with:
+
+```powershell
+kubectl --kubeconfig work/k8s/kubeconfig --context kind-pikalo-local -n pikalo top pods
+kubectl --kubeconfig work/k8s/kubeconfig --context kind-pikalo-local -n pikalo get hpa
+kubectl --kubeconfig work/k8s/kubeconfig --context kind-pikalo-local -n pikalo describe hpa answer-api
+kubectl --kubeconfig work/k8s/kubeconfig --context kind-pikalo-local -n pikalo get events --field-selector involvedObject.kind=HorizontalPodAutoscaler --sort-by=.lastTimestamp
+```
+
+The verifier waits for one idle Ready answer Pod, then starts a bounded Node CPU
+exercise inside that container. This child process's CPU is part of the same
+container resource measurement. The HPA must produce three Ready answer Pods;
+reapplying the overlay must preserve its replica count. The verifier then stops
+the exact child process it started and waits for the HPA to return to one Ready
+Pod. The child has a five-minute lifetime bound, and cleanup closes the local
+kubectl process. Timestamped observations are written to ignored
+`work/k8s/hpa-observations.jsonl` and printed in the command output.
+
+This is a synthetic test of the real metrics-to-HPA control loop. It sends no
+answer requests and measures neither request throughput nor p95 latency. Those
+measurements belong to Phase 5; cloud-backed traffic still requires cost approval.
+
+### Phase 3 results on November 19, 2026
+
+`./scripts/k8s/enable-autoscaling.ps1` passed server-side manifest validation,
+metrics-server rollout and Metrics API availability checks. Running
+`./scripts/k8s/verify-autoscaling.ps1` produced:
+
+```text
+PASS HPA scaled answer-api from 1 to 3 Ready Pods
+PASS reapplying autoscaling manifests preserved the HPA replica count
+PASS HPA scaled answer-api back to 1 Ready Pod
+Observed peak Ready replicas: 3. This is a synthetic scaling smoke test, not measured request capacity.
+Phase 3 verification passed; no cloud services called.
+```
+
+The `kubectl get events` command, scoped to HPA objects, confirmed
+`SuccessfulRescale` events for sizes 3, 2 and 1. A final `kubectl get hpa` showed
+`cpu: 13%/60%`, min 1, max 3 and replicas 1. Both app Deployments were `1/1`
+Ready, with zero restarts in their surviving Pods. The base `deploy.ps1` guard
+was also exercised and correctly refused to reset HPA-managed replicas.
+These observations came from the commands documented above and the synthetic
+CPU exercise, not live user traffic. The local cluster was then torn down.
 
 ## Real cloud configuration (requires separate approval)
 

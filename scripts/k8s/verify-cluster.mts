@@ -98,6 +98,11 @@ async function waitForAnswerEndpoints(ready: boolean) {
 
 let calculatorScaledDown = false;
 try {
+  assert.equal(
+    JSON.parse(kubectl("get", "hpa", "-o", "json")).items.length,
+    0,
+    "Run Phase 2 verification before enabling HPA; this check manually changes replicas.",
+  );
   console.log(
     kubectl(
       "-n",
