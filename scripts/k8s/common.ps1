@@ -4,7 +4,9 @@ $ClusterName = 'pikalo-local'
 $KubeContext = 'kind-pikalo-local'
 $Kubeconfig = Join-Path $RepoRoot 'work/k8s/kubeconfig'
 # Refresh PATH for tools installed during this session.
-$env:PATH = [Environment]::GetEnvironmentVariable('Path', 'Machine') + ';' + [Environment]::GetEnvironmentVariable('Path', 'User') + ';' + $env:PATH
+if ([Environment]::OSVersion.Platform -eq [PlatformID]::Win32NT) {
+    $env:PATH = [Environment]::GetEnvironmentVariable('Path', 'Machine') + ';' + [Environment]::GetEnvironmentVariable('Path', 'User') + ';' + $env:PATH
+}
 
 function Invoke-LocalKubectl {
     & kubectl --kubeconfig $Kubeconfig --context $KubeContext @args

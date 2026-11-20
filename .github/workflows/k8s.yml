@@ -1,0 +1,93 @@
+name: Kubernetes
+
+on:
+  push:
+  pull_request:
+  merge_group:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: k8s-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  evals:
+    name: Kubernetes eval gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Install pinned local-cluster tools
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsSL https://kind.sigs.k8s.io/dl/v0.33.0/kind-linux-amd64 -o "$RUNNER_TEMP/kind"
+          sudo install -m 0755 "$RUNNER_TEMP/kind" /usr/local/bin/kind
+          curl -fsSL https://dl.k8s.io/release/v1.36.4/bin/linux/amd64/kubectl -o "$RUNNER_TEMP/kubectl"
+          curl -fsSL https://dl.k8s.io/release/v1.36.4/bin/linux/amd64/kubectl.sha256 -o "$RUNNER_TEMP/kubectl.sha256"
+          echo "$(cat "$RUNNER_TEMP/kubectl.sha256")  $RUNNER_TEMP/kubectl" | sha256sum --check
+          sudo install -m 0755 "$RUNNER_TEMP/kubectl" /usr/local/bin/kubectl
+          kind version
+          kubectl version --client
+      - name: Build candidate images
+        run: |
+          docker build -f services/mcp-calc/Dockerfile -t pikalo-mcp-calc:local .
+          if ($LASTEXITCODE -ne 0) { throw 'Calculator image build failed' }
+          docker build -f services/answer-api/Dockerfile -t pikalo-answer-api:local .
+          if ($LASTEXITCODE -ne 0) { throw 'Answer image build failed' }
+          docker build -f evals/Dockerfile -t pikalo-evals:local .
+          if ($LASTEXITCODE -ne 0) { throw 'Eval image build failed' }
+      - name: Create kind cluster
+        run: ./scripts/k8s/create-cluster.ps1
+      - name: Load all three candidate images
+        run: ./scripts/k8s/load-images.ps1 -IncludeEvals
+      - name: Create dummy local credentials
+        run: ./scripts/k8s/create-local-secret.ps1 -Fixture
+      - name: Deploy candidate services
+        run: ./scripts/k8s/deploy.ps1
+      - name: Require all 47 eval cases to pass in the Job
+        run: ./scripts/k8s/run-evals.ps1
+      - name: Prove one wrong expectation fails the Job
+        run: ./scripts/k8s/run-evals.ps1 -NegativeControl
+      - name: Collect diagnostic evidence
+        if: always()
+        run: |
+          $ErrorActionPreference = 'Continue'
+          $env:KUBECONFIG = Join-Path $PWD 'work/k8s/kubeconfig'
+          New-Item -ItemType Directory -Force work/k8s | Out-Null
+          kubectl --context kind-pikalo-local -n pikalo get jobs,pods,deployments,services -o wide *> work/k8s/resources.log
+          kubectl --context kind-pikalo-local -n pikalo get events --sort-by=.lastTimestamp *> work/k8s/events.log
+          kubectl --context kind-pikalo-local -n pikalo describe jobs *> work/k8s/jobs.log
+          foreach ($jobName in @('pikalo-evals', 'pikalo-evals-negative')) {
+            kubectl --context kind-pikalo-local -n pikalo logs "job/$jobName" -c evals *> "work/k8s/$jobName.log"
+          }
+          exit 0
+      - name: Attach eval report to run summary
+        if: always()
+        run: |
+          if (Test-Path work/k8s/pikalo-evals.log) {
+            Get-Content -Raw work/k8s/pikalo-evals.log | Add-Content $env:GITHUB_STEP_SUMMARY
+          }
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: k8s-eval-evidence-${{ github.run_id }}
+          path: work/k8s/*.log
+          retention-days: 7
+          if-no-files-found: warn
+      - name: Tear down local cluster
+        if: always()
+        run: ./scripts/k8s/teardown.ps1

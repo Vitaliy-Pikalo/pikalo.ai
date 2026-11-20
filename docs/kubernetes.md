@@ -2,8 +2,9 @@
 
 Phase 2 runs the two Phase 1 service images on a free, single-node kind cluster.
 Phase 3 adds metrics-server and CPU-based answer API autoscaling. The live
-Next.js/Vercel app and AWS infrastructure are unchanged. Eval Jobs, CI rollout
-gates and request load testing are later phases.
+Next.js/Vercel app and AWS infrastructure are unchanged. Phase 4 runs deterministic
+evals as a Kubernetes Job and adds a GitHub Actions gate. Request load testing is
+reserved for Phase 5.
 
 ## Concepts for interviews
 
@@ -228,6 +229,92 @@ Ready, with zero restarts in their surviving Pods. The base `deploy.ps1` guard
 was also exercised and correctly refused to reset HPA-managed replicas.
 These observations came from the commands documented above and the synthetic
 CPU exercise, not live user traffic. The local cluster was then torn down.
+
+## Phase 4: eval Job and GitHub Actions gate
+
+A Job runs a task to completion, recording `Complete` or `Failed` separately
+from the long-running service Deployments. `k8s/jobs/eval-job.yaml` runs the eval
+container once, with `restartPolicy: Never`, `backoffLimit: 0`, a 180-second active
+deadline and a ten-minute cleanup TTL. The launcher watches for either terminal
+condition and fails if the Job times out, fails, or returns a nonzero process exit.
+See [Kubernetes Job semantics](https://kubernetes.io/docs/concepts/workloads/controllers/job/).
+
+`evals/cluster.mts` runs all 33 existing calculator cases through
+`http://mcp-calc:3001/mcp`, and all 14 existing provenance cases inside the same
+Job. Both suites require 100%. It also checks answer health/readiness and HTTP
+rejection of invalid input. The Job image reuses the answer service image built
+from the same checkout, then copies in the eval code and fixtures. It does not
+run the separate 11-question live Bedrock evaluation or measure model quality.
+
+The Job mounts no Secret or service-account token. Local and CI Deployments use
+dummy credentials and unreachable placeholder cloud URLs. Neither this eval
+gate nor its negative control needs AWS credentials, Supabase access, GitHub
+Actions secrets, an image registry push or a paid cluster.
+
+Reproduce from PowerShell at the repository root:
+
+```powershell
+# Build both Phase 1 service images first if needed.
+docker build -f evals/Dockerfile -t pikalo-evals:local .
+./scripts/k8s/create-cluster.ps1
+try {
+    ./scripts/k8s/load-images.ps1 -IncludeEvals
+    ./scripts/k8s/create-local-secret.ps1 -Fixture
+    ./scripts/k8s/deploy.ps1
+    ./scripts/k8s/run-evals.ps1
+    ./scripts/k8s/run-evals.ps1 -NegativeControl
+} finally {
+    ./scripts/k8s/teardown.ps1
+}
+```
+
+The negative control changes one expected field in a temporary ConfigMap
+override. The checked-in gold fixtures remain unchanged. It must produce
+`32/33` calculator passes, `14/14` provenance passes, process exit 1 and a failed
+Job; image errors, scheduling failures or timeouts cannot satisfy this check.
+The negative-control launcher exits successfully only after confirming this
+expected failure. Logs stay in ignored `work/k8s/pikalo-evals*.log`. Rerunning a
+launcher replaces its own previously completed Job; it does not alter service
+replicas or HPA configuration.
+
+`.github/workflows/k8s.yml` runs on every push, pull request, merge group and
+manual dispatch. Its stable check name is **Kubernetes eval gate**. The workflow
+builds the three candidate images, creates a pinned kind cluster, loads the
+images locally, deploys both services, requires the positive Job to pass, and
+proves failure propagation with the negative control. It uploads only diagnostic
+`.log` files, excluding kubeconfig credentials, and attempts teardown with
+`if: always()`. Its GitHub token has only `contents: read`; fork PRs need no
+repository secrets. Windows and Linux runners use the same PowerShell launchers.
+
+### Required merge checks
+
+A workflow file creates a check but does not by itself prevent merging. GitHub
+must require **Kubernetes eval gate** for `main` through branch protection or a
+ruleset. Keep the existing **check** and **infra** CI jobs required as well, and
+require the branch to be up to date. This configuration belongs to GitHub's
+repository settings rather than a versioned YAML file. Until required checks are
+configured and a hosted run has passed, describe the workflow as implemented,
+not as verified merge enforcement. See [GitHub required status checks](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/about-protected-branches#require-status-checks-before-merging).
+
+### Local Phase 4 results on November 19, 2026
+
+The eval image built successfully. The positive and negative-control launchers
+were run against the two deployed services in kind:
+
+```text
+tools       33/33  100.0%
+provenance  14/14  100.0%
+PASS eval Job Complete: 47/47 deterministic gold cases passed inside Kubernetes.
+
+tools       32/33   97.0%
+provenance  14/14  100.0%
+PASS negative control: one wrong expectation caused eval exit 1 and Job Failed.
+```
+
+`npm test` passed 203 tests across 19 files; `npm run eval` still passed all 47
+original deterministic cases. Typechecking and workflow validation with
+`actionlint .github/workflows/k8s.yml` passed. The original gold files and live
+application code were unchanged. The local test cluster was torn down afterward.
 
 ## Real cloud configuration (requires separate approval)
 
