@@ -87,6 +87,38 @@ Invoke-RestMethod http://127.0.0.1:3001/healthz
 docker stop pikalo-mcp-calc
 ```
 
+For automated checks of both built images:
+
+```powershell
+node --import tsx scripts/verify-containers.mts
+```
+
+This command creates a temporary Docker network and two containers, exposing
+test ports only on localhost and using placeholder gateway/Supabase configuration.
+It checks health/readiness,
+runs the 33 calculator cases against the container's HTTP MCP endpoint and the
+14 provenance cases on the host, checks invalid answer input, and verifies that
+answer readiness becomes 503 while liveness stays 200 when the calculator stops.
+It removes its containers and network in a `finally` block. It makes no cloud
+calls and does not perform a live model evaluation. Built images remain available
+for the next phase.
+
+### Verified locally on November 19, 2026
+
+Both `docker build` commands above passed using Docker Engine 29.9.3 on
+`linux/amd64`. Running `node --import tsx scripts/verify-containers.mts` produced:
+
+```text
+mcp-calc: /healthz -> 200, /readyz -> 200
+answer-api: /healthz -> 200, /readyz -> 200
+tools: 33/33 (100.0%)
+provenance: 14/14 (100.0%)
+answer-api invalid input -> 400
+Calculator stopped: /readyz -> 503, /healthz -> 200
+Container verification passed; no cloud services called.
+Cleanup complete: verification containers and network removed.
+```
+
 An actual answer request still invokes paid AWS services through the existing
 gateway. Obtain approval before live evals or load tests. Container build and
 health checks above do not invoke AWS. Kubernetes, scaling, rollout Jobs and
