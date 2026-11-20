@@ -1,0 +1,10 @@
+.git
+**/node_modules
+.next
+**/.env*
+**/*.pem
+**/*.key
+**/coverage
+**/cdk.out
+.vercel
+work
