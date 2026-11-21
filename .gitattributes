@@ -1,0 +1,2 @@
+# Keep the vendored release manifest's checksum stable on Windows checkouts.
+k8s/metrics-server/upstream/components.yaml text eol=lf

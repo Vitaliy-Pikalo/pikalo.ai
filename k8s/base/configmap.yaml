@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: answer-config
+data:
+  MCP_CALC_URL: http://mcp-calc:3001/mcp
+  ASSISTANT_MODEL_ID: us.amazon.nova-micro-v1:0
+  # Safe local defaults. Replace only when cloud usage has been approved.
+  SUPABASE_URL: http://127.0.0.1:1
+  EMBED_URL: http://127.0.0.1:1
