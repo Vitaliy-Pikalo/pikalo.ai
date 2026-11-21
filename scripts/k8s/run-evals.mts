@@ -39,6 +39,15 @@ const job = JSON.parse(
 );
 job.metadata.name = jobName;
 const negativeConfigName = "eval-negative-control";
+const goldTools = JSON.parse(
+  await readFile(new URL("../../evals/gold-tools.json", import.meta.url), "utf8"),
+);
+const goldProvenance = JSON.parse(
+  await readFile(new URL("../../evals/gold-provenance.json", import.meta.url), "utf8"),
+);
+const toolTotal = goldTools.cases.length;
+const provenanceTotal = goldProvenance.cases.length;
+assert.ok(toolTotal > 0 && provenanceTotal > 0, "Both gold suites must be nonempty");
 let createdConfig = false;
 try {
   const config = JSON.parse(
@@ -54,9 +63,7 @@ try {
     kubectl(["delete", "job", jobName, "--ignore-not-found=true", "--wait=true"]),
   );
   if (negative) {
-    const gold = JSON.parse(
-      await readFile(new URL("../../evals/gold-tools.json", import.meta.url), "utf8"),
-    );
+    const gold = structuredClone(goldTools);
     gold.cases[0].expect = { __negative_control_expected_failure__: true };
     console.log(
       kubectl(["apply", "-f", "-"], {
@@ -117,8 +124,8 @@ try {
       1,
       "Negative control must fail through the eval process, not scheduling or image errors",
     );
-    assert.match(logs, /\| tools \| 32\/33 \|/);
-    assert.match(logs, /\| provenance \| 14\/14 \|/);
+    assert.ok(logs.includes(`| tools | ${toolTotal - 1}/${toolTotal} |`));
+    assert.ok(logs.includes(`| provenance | ${provenanceTotal}/${provenanceTotal} |`));
     assert.match(logs, /__negative_control_expected_failure__/);
     console.log(
       "PASS negative control: one wrong expectation caused eval exit 1 and Job Failed.",
@@ -126,10 +133,10 @@ try {
   } else {
     assert.equal(result, "Complete", "Eval Job failed; deployment gate must fail");
     assert.equal(exitCode, 0);
-    assert.match(logs, /\| tools \| 33\/33 \|/);
-    assert.match(logs, /\| provenance \| 14\/14 \|/);
+    assert.ok(logs.includes(`| tools | ${toolTotal}/${toolTotal} |`));
+    assert.ok(logs.includes(`| provenance | ${provenanceTotal}/${provenanceTotal} |`));
     console.log(
-      "PASS eval Job Complete: 47/47 deterministic gold cases passed inside Kubernetes.",
+      `PASS eval Job Complete: ${toolTotal + provenanceTotal}/${toolTotal + provenanceTotal} deterministic gold cases passed inside Kubernetes.`,
     );
   }
 } finally {

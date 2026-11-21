@@ -68,8 +68,8 @@ npm test
 npm run eval
 ```
 
-The service tests open real loopback HTTP listeners. They run all 33 existing
-calculator cases against the remote MCP server, check the 14 provenance cases,
+The service tests open real loopback HTTP listeners. They run all checked-in
+calculator cases against the remote MCP server, check all provenance cases,
 and exercise the full answer-to-calculator HTTP flow with a deterministic model
 fixture. They also check malformed input, body limits, health endpoints and
 calculator outage/recovery. This is not a new live Bedrock evaluation.
@@ -80,8 +80,8 @@ Build from the repository root. The runtime uses Node 22 and production
 dependencies, including `tsx` to execute the shared TypeScript sources.
 
 ```powershell
-docker build -f services/mcp-calc/Dockerfile -t pikalo-mcp-calc:local .
-docker build -f services/answer-api/Dockerfile -t pikalo-answer-api:local .
+docker build --load -f services/mcp-calc/Dockerfile -t pikalo-mcp-calc:local .
+docker build --load -f services/answer-api/Dockerfile -t pikalo-answer-api:local .
 docker run --rm -d --name pikalo-mcp-calc -p 127.0.0.1:3001:3001 pikalo-mcp-calc:local
 Invoke-RestMethod http://127.0.0.1:3001/healthz
 docker stop pikalo-mcp-calc
@@ -96,14 +96,17 @@ node --import tsx scripts/verify-containers.mts
 This command creates a temporary Docker network and two containers, exposing
 test ports only on localhost and using placeholder gateway/Supabase configuration.
 It checks health/readiness,
-runs the 33 calculator cases against the container's HTTP MCP endpoint and the
-14 provenance cases on the host, checks invalid answer input, and verifies that
+runs all calculator cases against the container's HTTP MCP endpoint and all
+provenance cases on the host, checks invalid answer input, and verifies that
 answer readiness becomes 503 while liveness stays 200 when the calculator stops.
 It removes its containers and network in a `finally` block. It makes no cloud
 calls and does not perform a live model evaluation. Built images remain available
 for the next phase.
 
 ### Verified locally on November 19, 2026
+
+These Phase 1 results predate synchronization with newer upstream fixtures;
+current verifiers load all checked-in cases rather than freezing these counts.
 
 Both `docker build` commands above passed using Docker Engine 29.9.3 on
 `linux/amd64`. Running `node --import tsx scripts/verify-containers.mts` produced:

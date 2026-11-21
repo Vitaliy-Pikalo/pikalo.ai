@@ -89,7 +89,7 @@ describe("standalone services over real HTTP (no cloud calls)", () => {
     );
   });
 
-  it("passes all 33 existing calculator cases across the HTTP MCP boundary and all 14 provenance cases", async () => {
+  it("passes all checked-in calculator cases across the HTTP MCP boundary and all provenance cases", async () => {
     const tools = createRemoteToolRunner(`${mcpBase}/mcp`);
     expect(await tools.specs()).toHaveLength(3);
     const toolCases = JSON.parse(await readFile("evals/gold-tools.json", "utf8"))
@@ -103,8 +103,10 @@ describe("standalone services over real HTTP (no cloud calls)", () => {
       return result.output;
     });
     expect(calculator.failures).toEqual([]);
-    expect(calculator.passed).toBe(33);
-    expect(runProvenanceEvals(provenanceCases).passed).toBe(14);
+    expect(toolCases.length).toBeGreaterThan(0);
+    expect(provenanceCases.length).toBeGreaterThan(0);
+    expect(calculator.passed).toBe(toolCases.length);
+    expect(runProvenanceEvals(provenanceCases).passed).toBe(provenanceCases.length);
     expect((await tools.call("check_tax_residency", { daysCurrent: -5 })).ok).toBe(false);
   }, 20_000);
 

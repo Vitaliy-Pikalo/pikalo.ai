@@ -55,8 +55,8 @@ existing cluster named `pikalo-local`.
 
 ```powershell
 # Build these first if the Phase 1 images are not available.
-docker build -f services/mcp-calc/Dockerfile -t pikalo-mcp-calc:local .
-docker build -f services/answer-api/Dockerfile -t pikalo-answer-api:local .
+docker build --load -f services/mcp-calc/Dockerfile -t pikalo-mcp-calc:local .
+docker build --load -f services/answer-api/Dockerfile -t pikalo-answer-api:local .
 
 ./scripts/k8s/create-cluster.ps1
 try {
@@ -82,7 +82,7 @@ does not submit a valid model question. It verifies:
 1. Both Deployments become available; server-side dry-run validates the manifests.
 2. Both health and readiness endpoints return 200.
 3. All 33 existing calculator cases pass through HTTP MCP to a Kubernetes Pod.
-4. All 14 provenance cases pass on the host, and invalid answer input returns 400.
+4. All checked-in provenance cases pass on the host, and invalid answer input returns 400.
 5. When the calculator is manually scaled to zero, answer readiness returns 503,
    the answer Service loses its ready endpoints, and liveness still returns 200.
    The same answer Pod remains running without additional restarts.
@@ -240,10 +240,10 @@ condition and fails if the Job times out, fails, or returns a nonzero process ex
 See [Kubernetes Job semantics](https://kubernetes.io/docs/concepts/workloads/controllers/job/).
 
 `evals/cluster.mts` runs all 33 existing calculator cases through
-`http://mcp-calc:3001/mcp`, and all 14 existing provenance cases inside the same
+`http://mcp-calc:3001/mcp`, and all 16 current provenance cases inside the same
 Job. Both suites require 100%. It also checks answer health/readiness and HTTP
-rejection of invalid input. The Job image reuses the answer service image built
-from the same checkout, then copies in the eval code and fixtures. It does not
+rejection of invalid input. The Job image uses the same locked production
+runtime as the services, then copies in the eval code and fixtures. It does not
 run the separate 11-question live Bedrock evaluation or measure model quality.
 
 The Job mounts no Secret or service-account token. Local and CI Deployments use
@@ -254,8 +254,9 @@ Actions secrets, an image registry push or a paid cluster.
 Reproduce from PowerShell at the repository root:
 
 ```powershell
-# Build both Phase 1 service images first if needed.
-docker build -f evals/Dockerfile -t pikalo-evals:local .
+docker build --load -f services/mcp-calc/Dockerfile -t pikalo-mcp-calc:local .
+docker build --load -f services/answer-api/Dockerfile -t pikalo-answer-api:local .
+docker build --load -f evals/Dockerfile -t pikalo-evals:local .
 ./scripts/k8s/create-cluster.ps1
 try {
     ./scripts/k8s/load-images.ps1 -IncludeEvals
@@ -270,7 +271,7 @@ try {
 
 The negative control changes one expected field in a temporary ConfigMap
 override. The checked-in gold fixtures remain unchanged. It must produce
-`32/33` calculator passes, `14/14` provenance passes, process exit 1 and a failed
+`32/33` calculator passes, all provenance cases passing, process exit 1 and a failed
 Job; image errors, scheduling failures or timeouts cannot satisfy this check.
 The negative-control launcher exits successfully only after confirming this
 expected failure. Logs stay in ignored `work/k8s/pikalo-evals*.log`. Rerunning a
@@ -298,6 +299,13 @@ not as verified merge enforcement. See [GitHub required status checks](https://d
 
 ### Local Phase 4 results on November 19, 2026
 
+These historical results precede synchronization with newer `main`. Upstream
+added `prov-15` and `prov-16`; the current checked-in corpus has 33 calculator
+and 16 provenance cases (49 total). Verifiers now derive counts from the files,
+so new upstream cases cannot be silently excluded. The gold files were not edited
+by this project. Builds use `--load` so isolated Docker builders export images
+to the engine for kind rather than leaving them only in build cache.
+
 The eval image built successfully. The positive and negative-control launchers
 were run against the two deployed services in kind:
 
@@ -315,6 +323,24 @@ PASS negative control: one wrong expectation caused eval exit 1 and Job Failed.
 original deterministic cases. Typechecking and workflow validation with
 `actionlint .github/workflows/k8s.yml` passed. The original gold files and live
 application code were unchanged. The local test cluster was torn down afterward.
+
+### Current Phase 4 verification on November 21, 2026
+
+The Kubernetes commits were rebased onto upstream `44b6e1e`, preserving its newer
+application features and gold fixtures. Current local verification passed:
+
+```text
+npm test: 293/293 tests passed across 29 files
+npm run eval: tools 33/33, provenance 16/16
+PASS eval Job Complete: 49/49 deterministic gold cases passed inside Kubernetes.
+Negative control: tools 32/33, provenance 16/16, eval process exit 1, Job Failed
+PASS negative control: one wrong expectation caused eval exit 1 and Job Failed.
+```
+
+Both service Deployments were `1/1` Ready with zero restarts during this Job run.
+Typechecking, targeted lint and actionlint passed. The source application and gold
+files match upstream exactly. The fresh cluster and its unused network were removed
+with `teardown.ps1`; no cloud service calls were made.
 
 ## Real cloud configuration (requires separate approval)
 

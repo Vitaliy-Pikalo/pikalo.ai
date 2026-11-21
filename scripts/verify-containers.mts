@@ -105,8 +105,9 @@ try {
     "Calculator cases execute in Docker; provenance cases execute on the host.",
   );
   console.log(formatReport(suites));
-  assert.equal(suites[0].total, 33);
-  assert.equal(suites[1].total, 14);
+  assert.ok(toolCases.length > 0 && provenanceCases.length > 0);
+  assert.equal(suites[0].total, toolCases.length);
+  assert.equal(suites[1].total, provenanceCases.length);
   assert.ok(suites.every((suite) => suite.rate === 1));
   assert.equal(
     (await fetch(`${answer}/api/ask`, { method: "POST", body: "{}" })).status,

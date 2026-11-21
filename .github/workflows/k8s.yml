@@ -44,11 +44,11 @@ jobs:
           kubectl version --client
       - name: Build candidate images
         run: |
-          docker build -f services/mcp-calc/Dockerfile -t pikalo-mcp-calc:local .
+          docker build --load -f services/mcp-calc/Dockerfile -t pikalo-mcp-calc:local .
           if ($LASTEXITCODE -ne 0) { throw 'Calculator image build failed' }
-          docker build -f services/answer-api/Dockerfile -t pikalo-answer-api:local .
+          docker build --load -f services/answer-api/Dockerfile -t pikalo-answer-api:local .
           if ($LASTEXITCODE -ne 0) { throw 'Answer image build failed' }
-          docker build -f evals/Dockerfile -t pikalo-evals:local .
+          docker build --load -f evals/Dockerfile -t pikalo-evals:local .
           if ($LASTEXITCODE -ne 0) { throw 'Eval image build failed' }
       - name: Create kind cluster
         run: ./scripts/k8s/create-cluster.ps1
@@ -58,7 +58,7 @@ jobs:
         run: ./scripts/k8s/create-local-secret.ps1 -Fixture
       - name: Deploy candidate services
         run: ./scripts/k8s/deploy.ps1
-      - name: Require all 47 eval cases to pass in the Job
+      - name: Require every deterministic eval case to pass in the Job
         run: ./scripts/k8s/run-evals.ps1
       - name: Prove one wrong expectation fails the Job
         run: ./scripts/k8s/run-evals.ps1 -NegativeControl
