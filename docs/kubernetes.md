@@ -1,10 +1,13 @@
 # Ask Pikalo on local Kubernetes
 
-Phase 2 runs the two Phase 1 service images on a free, single-node kind cluster.
-Phase 3 adds metrics-server and CPU-based answer API autoscaling. The live
-Next.js/Vercel app and AWS infrastructure are unchanged. Phase 4 runs deterministic
-evals as a Kubernetes Job and adds a GitHub Actions gate. Request load testing is
-reserved for Phase 5.
+Two standalone service images run on a free, single-node kind cluster, with
+metrics-server and CPU-based answer API autoscaling. Deterministic evals run as
+a Kubernetes Job in a required GitHub Actions check. A k6 benchmark exercises the
+HTTP answer path with local model/retrieval fixtures and the real MCP calculator.
+The live Next.js/Vercel app and AWS infrastructure are unchanged.
+
+See the [architecture and interview guide](kubernetes-architecture.md) and
+[load-test methodology and commands](../load/README.md).
 
 ## Concepts for interviews
 
@@ -289,13 +292,15 @@ repository secrets. Windows and Linux runners use the same PowerShell launchers.
 
 ### Required merge checks
 
-A workflow file creates a check but does not by itself prevent merging. GitHub
-must require **Kubernetes eval gate** for `main` through branch protection or a
-ruleset. Keep the existing **check** and **infra** CI jobs required as well, and
-require the branch to be up to date. This configuration belongs to GitHub's
-repository settings rather than a versioned YAML file. Until required checks are
-configured and a hosted run has passed, describe the workflow as implemented,
-not as verified merge enforcement. See [GitHub required status checks](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/about-protected-branches#require-status-checks-before-merging).
+GitHub branch protection on `main` requires **Kubernetes eval gate**, **check**
+and **infra**, bound to the GitHub Actions app. Branches must be up to date, and
+administrator enforcement is enabled. These repository settings were applied and
+read back through GitHub's API; hosted positive and negative-control Jobs passed.
+For example, [Kubernetes run 44966614908](https://github.com/Vitaliy-Pikalo/pikalo.ai/actions/runs/44966614908)
+and [application/infra run 44966614900](https://github.com/Vitaliy-Pikalo/pikalo.ai/actions/runs/44966614900)
+passed for `564eb06`. A failing eval Job fails the required check, preventing a
+normal merge. These settings belong to GitHub rather than a versioned manifest.
+See [GitHub required status checks](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/about-protected-branches#require-status-checks-before-merging).
 
 ### Local Phase 4 results on November 19, 2026
 
