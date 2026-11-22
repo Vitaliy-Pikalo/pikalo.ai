@@ -12,7 +12,10 @@
     "typecheck": "next typegen && tsc --noEmit",
     "mcp": "tsx mcp/stdio.mts",
     "eval": "tsx evals/run.mts",
-    "eval:assistant": "tsx evals/assistant.mts"
+    "eval:assistant": "tsx evals/assistant.mts",
+    "service:answer": "tsx services/answer-api/server.mts",
+    "service:mcp": "tsx services/mcp-calc/server.mts",
+    "test:services": "vitest run tests/services.test.ts"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.32.2",
@@ -22,7 +25,8 @@
     "node-html-parser": "^9.0.6",
     "react": "19.3.0",
     "react-dom": "19.3.0",
-    "zod": "^4.6.7"
+    "zod": "^4.6.7",
+    "tsx": "^4.23.15"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.3.4",
@@ -37,7 +41,6 @@
     "jsdom": "^30.1.3",
     "prettier": "^3.9.10",
     "tailwindcss": "^4",
-    "tsx": "^4.23.15",
     "typescript": "^5",
     "vitest": "^5.1.0"
   }

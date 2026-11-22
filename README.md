@@ -104,6 +104,51 @@ npm test           # CDK assertion tests (synth + bundle)
 npx cdk deploy     # needs AWS credentials and a bootstrapped account
 ```
 
+## Local Kubernetes portfolio deployment
+
+The additive Kubernetes variant splits Ask Pikalo into an answer/retrieval API
+and an HTTP MCP calculator server. It reuses the assistant, calculator engines
+and guards; the live Next.js/Vercel application stays on its existing path.
+Docker images run on kind with Deployments, ClusterIP Services, probes,
+ConfigMap/Secret configuration and a CPU HPA (1–3 answer replicas).
+
+The **Kubernetes eval gate** GitHub Actions check creates a disposable cluster,
+deploys candidate images, and requires all **49 calculator/provenance cases** to
+pass in a Job. A negative-control Job deliberately changes one expected value
+and must fail with process exit 1. `main` requires this check and the existing
+application/infra checks, including for administrators.
+
+The k6 benchmark calls the actual HTTP answer handler, MCP calculator and
+answer guards using **local deterministic model and retrieval fixtures**.
+Its results describe local orchestration, not Bedrock latency, production
+Supabase retrieval or live-site capacity. The generator shares a single kind
+node with the services; only the separate fixture entry point raises the normal
+eight-requests/minute local limiter.
+
+Measured November 21, 2026 on Docker Desktop (8 Docker CPUs, 5.68 GiB memory):
+
+| Local fixture run           | Completed requests/s |    HTTP p95 | Peak Ready answer Pods | Dropped iterations | Outcome                        |
+| --------------------------- | -------------------: | ----------: | ---------------------: | -----------------: | ------------------------------ |
+| Smoke: 1/s offered, 10 s    |                 1.08 |   243.30 ms |                      1 |                  0 | Pass                           |
+| Stress: 20/s offered, 180 s |                19.72 | 3,198.32 ms |                      3 |                 51 | **Failed zero-drop threshold** |
+
+All 3,550 completed stress requests returned valid calculator-backed answers,
+with zero HTTP failures. The 51 unstarted iterations are excluded from that
+validity rate. This run does **not** establish sustainable 20 requests/s capacity.
+[Raw output, Pod samples and exact methodology](docs/benchmarks/2026-11-21-local-fixtures/README.md)
+include the failed threshold rather than treating this stress run as a pass.
+
+After building the four images as shown in the
+[benchmark instructions](load/README.md), reproduce with:
+
+```powershell
+./scripts/k8s/benchmark.ps1 -Rate 20 -Seconds 180
+```
+
+The script also runs a smoke test and removes its cluster in `finally`.
+No EKS resources were created. See the [setup and verification guide](docs/kubernetes.md)
+and [architecture diagram and interview explanations](docs/kubernetes-architecture.md).
+
 ## Roadmap
 
 - Citation-grounded assistant (retrieval over IRS publications and state revenue guidance) with an evaluation set for answer and citation accuracy

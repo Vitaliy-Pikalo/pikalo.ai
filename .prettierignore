@@ -2,3 +2,5 @@
 node_modules
 package-lock.json
 app/fonts
+# Preserve the vendored release manifest byte-for-byte.
+k8s/metrics-server/upstream/components.yaml

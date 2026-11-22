@@ -18,6 +18,8 @@ export interface AskHandlerDeps {
   /** Shared (cross-instance) limiter; null = not configured. */
   limit?(ip: string): Promise<LimitVerdict | null>;
   now?: () => number;
+  /** Internal factory option for isolated load tests; normal routes keep 8/minute. */
+  localLimitPerMinute?: number;
 }
 
 const LIMIT_MESSAGES: Record<string, string> = {
@@ -27,6 +29,9 @@ const LIMIT_MESSAGES: Record<string, string> = {
 };
 
 export function createAskHandler(deps: AskHandlerDeps) {
+  const localLimit = deps.localLimitPerMinute ?? RATE_LIMIT_PER_MINUTE;
+  if (!Number.isSafeInteger(localLimit) || localLimit < 1)
+    throw new Error("localLimitPerMinute must be a positive safe integer");
   // Per-instance limiter: a cheap first line of defense. Serverless instances
   // don't share memory, so this bounds each instance, not the whole fleet.
   const hits = new Map<string, number[]>();
@@ -36,7 +41,7 @@ export function createAskHandler(deps: AskHandlerDeps) {
     const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
     const t = now();
     const recent = (hits.get(ip) ?? []).filter((x) => t - x < WINDOW_MS);
-    if (recent.length >= RATE_LIMIT_PER_MINUTE) {
+    if (recent.length >= localLimit) {
       const retry = Math.ceil((WINDOW_MS - (t - recent[0])) / 1000);
       return Response.json(
         { error: "Too many questions. Please wait a minute." },

@@ -27,6 +27,20 @@ const req = (body: unknown, ip = "1.2.3.4") =>
   });
 
 describe("POST /api/ask handler", () => {
+  it("supports an explicit factory-only limit while retaining rate limiting", async () => {
+    const handler = createAskHandler({ run: async () => ok, localLimitPerMinute: 2 });
+    expect((await handler(req({ question: "q" }))).status).toBe(200);
+    expect((await handler(req({ question: "q" }))).status).toBe(200);
+    expect((await handler(req({ question: "q" }))).status).toBe(429);
+  });
+
+  it("rejects invalid factory limit configuration", () => {
+    for (const limit of [0, -1, 0.5, Infinity, NaN]) {
+      expect(() =>
+        createAskHandler({ run: async () => ok, localLimitPerMinute: limit }),
+      ).toThrow();
+    }
+  });
   it("returns the answer, citations and tool names", async () => {
     const run = vi.fn(async () => ok);
     const res = await createAskHandler({ run })(req({ question: "roth?" }));

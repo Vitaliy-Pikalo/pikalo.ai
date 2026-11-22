@@ -1,0 +1,27 @@
+{
+  "measuredAt": "2026-11-22T00:46:17.050Z",
+  "mode": "local deterministic model/retrieval fixtures",
+  "rate": 20,
+  "seconds": 180,
+  "completedRequests": 3550,
+  "requestsPerSecond": 19.717582700536102,
+  "p95Milliseconds": 3198.322422049996,
+  "httpFailureRate": 0,
+  "guardedAnswerRate": 1,
+  "droppedIterations": 51,
+  "maxActiveAnswerPods": 3,
+  "maxReadyAnswerPods": 3,
+  "k6Version": "2.4.0",
+  "cpuRequest": "100m",
+  "hpaTarget": "60%",
+  "hpaMaxReplicas": 3,
+  "connectionReuse": false,
+  "scriptSha256": "40b93c5eca8e8ef315ab193b551566c8eabea8c9f3d72fc0dc760f3ff87e8f68",
+  "environment": {
+    "kubernetes": "v1.36.4",
+    "node": "v22.23.5",
+    "dockerVersion": "29.9.3",
+    "dockerCpus": 8,
+    "dockerMemoryBytes": 6098739200
+  }
+}
