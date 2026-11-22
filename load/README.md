@@ -64,6 +64,14 @@ all answers valid for a successful recorded run. Failed runs retain evidence too
 
 ## Evidence
 
+The checked-in [November 21 results](../docs/benchmarks/2026-11-21-local-fixtures/README.md)
+include a passing smoke run and a stress run that **failed** the zero-drop
+threshold: 3,550 completed answers, 51 dropped iterations, 19.72 completed
+requests/second, 3,198.32 ms HTTP p95 and three Ready answer Pods. All completed
+answers passed the calculator/citation checks and none had an HTTP failure.
+These facts do not make the stress run a pass. The benchmark command exits nonzero
+when this happens, saves the evidence and still tears down its cluster.
+
 The measured output is written to ignored `work/load/measured/`:
 
 - `summary.json`: unmodified k6 summary.

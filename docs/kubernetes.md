@@ -347,6 +347,27 @@ Typechecking, targeted lint and actionlint passed. The source application and go
 files match upstream exactly. The fresh cluster and its unused network were removed
 with `teardown.ps1`; no cloud service calls were made.
 
+## Load test and project completion
+
+The [November 21 benchmark evidence](benchmarks/2026-11-21-local-fixtures/README.md)
+records a passing 1/s smoke test and a 20/s, 180-second stress test. The stress
+test completed 3,550 requests at 19.72 requests/s with HTTP p95 3,198.32 ms,
+zero HTTP failures and all completed answers valid. The answer HPA grew from
+one to three Ready Pods. However, k6 dropped 51 scheduled iterations, so the
+stress Job **failed** its zero-drop threshold. This is an observed limitation,
+not a passing capacity claim. No performance target was relaxed afterward.
+
+Run `./scripts/k8s/benchmark.ps1 -Rate 20 -Seconds 180` after the image builds in
+[load/README.md](../load/README.md). Raw summaries, logs and timestamped Pod
+observations are checked in with the results. The benchmark uses local model
+and retrieval fixtures with real MCP and guards, not cloud-backed inference.
+The cluster and unused kind network were removed after the failed threshold.
+
+The service split, cluster manifests, HPA, CI eval Job, measured load test and
+architecture documentation are implemented. EKS was optional and skipped;
+all project cluster work remained free and local. See the
+[architecture diagram and interview guide](kubernetes-architecture.md).
+
 ## Real cloud configuration (requires separate approval)
 
 No real AWS/Supabase configuration is used for Phase 2 verification. Before

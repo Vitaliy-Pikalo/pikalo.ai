@@ -1,0 +1,266 @@
+[
+  {
+    "at": "2026-11-22T00:43:09.003Z",
+    "active": 1,
+    "totalIncludingTerminating": 1,
+    "ready": 1,
+    "desired": 1,
+    "cpuUtilizationPercent": 12
+  },
+  {
+    "at": "2026-11-22T00:43:14.948Z",
+    "active": 1,
+    "totalIncludingTerminating": 1,
+    "ready": 1,
+    "desired": 1,
+    "cpuUtilizationPercent": 12
+  },
+  {
+    "at": "2026-11-22T00:43:20.863Z",
+    "active": 1,
+    "totalIncludingTerminating": 1,
+    "ready": 1,
+    "desired": 1,
+    "cpuUtilizationPercent": 40
+  },
+  {
+    "at": "2026-11-22T00:43:26.892Z",
+    "active": 1,
+    "totalIncludingTerminating": 1,
+    "ready": 1,
+    "desired": 1,
+    "cpuUtilizationPercent": 40
+  },
+  {
+    "at": "2026-11-22T00:43:32.800Z",
+    "active": 1,
+    "totalIncludingTerminating": 1,
+    "ready": 1,
+    "desired": 1,
+    "cpuUtilizationPercent": 40
+  },
+  {
+    "at": "2026-11-22T00:43:38.654Z",
+    "active": 3,
+    "totalIncludingTerminating": 3,
+    "ready": 1,
+    "desired": 3,
+    "cpuUtilizationPercent": 679
+  },
+  {
+    "at": "2026-11-22T00:43:44.401Z",
+    "active": 3,
+    "totalIncludingTerminating": 3,
+    "ready": 3,
+    "desired": 3,
+    "cpuUtilizationPercent": 679
+  },
+  {
+    "at": "2026-11-22T00:43:50.272Z",
+    "active": 3,
+    "totalIncludingTerminating": 3,
+    "ready": 3,
+    "desired": 3,
+    "cpuUtilizationPercent": 855
+  },
+  {
+    "at": "2026-11-22T00:43:56.085Z",
+    "active": 3,
+    "totalIncludingTerminating": 3,
+    "ready": 3,
+    "desired": 3,
+    "cpuUtilizationPercent": 855
+  },
+  {
+    "at": "2026-11-22T00:44:01.933Z",
+    "active": 3,
+    "totalIncludingTerminating": 3,
+    "ready": 3,
+    "desired": 3,
+    "cpuUtilizationPercent": 855
+  },
+  {
+    "at": "2026-11-22T00:44:07.609Z",
+    "active": 3,
+    "totalIncludingTerminating": 3,
+    "ready": 3,
+    "desired": 3,
+    "cpuUtilizationPercent": 560
+  },
+  {
+    "at": "2026-11-22T00:44:13.456Z",
+    "active": 3,
+    "totalIncludingTerminating": 3,
+    "ready": 3,
+    "desired": 3,
+    "cpuUtilizationPercent": 560
+  },
+  {
+    "at": "2026-11-22T00:44:19.355Z",
+    "active": 3,
+    "totalIncludingTerminating": 3,
+    "ready": 3,
+    "desired": 3,
+    "cpuUtilizationPercent": 560
+  },
+  {
+    "at": "2026-11-22T00:44:25.355Z",
+    "active": 3,
+    "totalIncludingTerminating": 3,
+    "ready": 3,
+    "desired": 3,
+    "cpuUtilizationPercent": 408
+  },
+  {
+    "at": "2026-11-22T00:44:31.317Z",
+    "active": 3,
+    "totalIncludingTerminating": 3,
+    "ready": 3,
+    "desired": 3,
+    "cpuUtilizationPercent": 408
+  },
+  {
+    "at": "2026-11-22T00:44:37.095Z",
+    "active": 3,
+    "totalIncludingTerminating": 3,
+    "ready": 3,
+    "desired": 3,
+    "cpuUtilizationPercent": 425
+  },
+  {
+    "at": "2026-11-22T00:44:42.975Z",
+    "active": 3,
+    "totalIncludingTerminating": 3,
+    "ready": 3,
+    "desired": 3,
+    "cpuUtilizationPercent": 425
+  },
+  {
+    "at": "2026-11-22T00:44:49.018Z",
+    "active": 3,
+    "totalIncludingTerminating": 3,
+    "ready": 3,
+    "desired": 3,
+    "cpuUtilizationPercent": 425
+  },
+  {
+    "at": "2026-11-22T00:44:55.128Z",
+    "active": 3,
+    "totalIncludingTerminating": 3,
+    "ready": 3,
+    "desired": 3,
+    "cpuUtilizationPercent": 376
+  },
+  {
+    "at": "2026-11-22T00:45:00.910Z",
+    "active": 3,
+    "totalIncludingTerminating": 3,
+    "ready": 3,
+    "desired": 3,
+    "cpuUtilizationPercent": 376
+  },
+  {
+    "at": "2026-11-22T00:45:06.878Z",
+    "active": 3,
+    "totalIncludingTerminating": 3,
+    "ready": 3,
+    "desired": 3,
+    "cpuUtilizationPercent": 337
+  },
+  {
+    "at": "2026-11-22T00:45:12.724Z",
+    "active": 3,
+    "totalIncludingTerminating": 3,
+    "ready": 3,
+    "desired": 3,
+    "cpuUtilizationPercent": 337
+  },
+  {
+    "at": "2026-11-22T00:45:18.465Z",
+    "active": 3,
+    "totalIncludingTerminating": 3,
+    "ready": 3,
+    "desired": 3,
+    "cpuUtilizationPercent": 337
+  },
+  {
+    "at": "2026-11-22T00:45:24.325Z",
+    "active": 3,
+    "totalIncludingTerminating": 3,
+    "ready": 3,
+    "desired": 3,
+    "cpuUtilizationPercent": 307
+  },
+  {
+    "at": "2026-11-22T00:45:30.109Z",
+    "active": 3,
+    "totalIncludingTerminating": 3,
+    "ready": 3,
+    "desired": 3,
+    "cpuUtilizationPercent": 307
+  },
+  {
+    "at": "2026-11-22T00:45:35.914Z",
+    "active": 3,
+    "totalIncludingTerminating": 3,
+    "ready": 3,
+    "desired": 3,
+    "cpuUtilizationPercent": 256
+  },
+  {
+    "at": "2026-11-22T00:45:41.833Z",
+    "active": 3,
+    "totalIncludingTerminating": 3,
+    "ready": 3,
+    "desired": 3,
+    "cpuUtilizationPercent": 256
+  },
+  {
+    "at": "2026-11-22T00:45:47.813Z",
+    "active": 3,
+    "totalIncludingTerminating": 3,
+    "ready": 3,
+    "desired": 3,
+    "cpuUtilizationPercent": 256
+  },
+  {
+    "at": "2026-11-22T00:45:53.609Z",
+    "active": 3,
+    "totalIncludingTerminating": 3,
+    "ready": 3,
+    "desired": 3,
+    "cpuUtilizationPercent": 223
+  },
+  {
+    "at": "2026-11-22T00:45:59.294Z",
+    "active": 3,
+    "totalIncludingTerminating": 3,
+    "ready": 3,
+    "desired": 3,
+    "cpuUtilizationPercent": 223
+  },
+  {
+    "at": "2026-11-22T00:46:05.010Z",
+    "active": 3,
+    "totalIncludingTerminating": 3,
+    "ready": 3,
+    "desired": 3,
+    "cpuUtilizationPercent": 235
+  },
+  {
+    "at": "2026-11-22T00:46:10.665Z",
+    "active": 3,
+    "totalIncludingTerminating": 3,
+    "ready": 3,
+    "desired": 3,
+    "cpuUtilizationPercent": 235
+  },
+  {
+    "at": "2026-11-22T00:46:16.480Z",
+    "active": 3,
+    "totalIncludingTerminating": 3,
+    "ready": 3,
+    "desired": 3,
+    "cpuUtilizationPercent": 235
+  }
+]

@@ -1,0 +1,42 @@
+[
+  {
+    "at": "2026-11-22T00:42:36.773Z",
+    "active": 1,
+    "totalIncludingTerminating": 1,
+    "ready": 1,
+    "desired": 1,
+    "cpuUtilizationPercent": 5
+  },
+  {
+    "at": "2026-11-22T00:42:42.760Z",
+    "active": 1,
+    "totalIncludingTerminating": 1,
+    "ready": 1,
+    "desired": 1,
+    "cpuUtilizationPercent": 5
+  },
+  {
+    "at": "2026-11-22T00:42:48.688Z",
+    "active": 1,
+    "totalIncludingTerminating": 1,
+    "ready": 1,
+    "desired": 1,
+    "cpuUtilizationPercent": 5
+  },
+  {
+    "at": "2026-11-22T00:42:54.783Z",
+    "active": 1,
+    "totalIncludingTerminating": 1,
+    "ready": 1,
+    "desired": 1,
+    "cpuUtilizationPercent": 12
+  },
+  {
+    "at": "2026-11-22T00:43:00.620Z",
+    "active": 1,
+    "totalIncludingTerminating": 1,
+    "ready": 1,
+    "desired": 1,
+    "cpuUtilizationPercent": 12
+  }
+]
