@@ -1,7 +1,7 @@
 /** Real HTTP load across Service DNS; model/retrieval are strictly local fixtures. */
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
 import { createHash } from "node:crypto";
@@ -37,6 +37,15 @@ const kubectl = (args: string[], input?: unknown) =>
   }).trim();
 const output = new URL(`../../work/load/${label}/`, import.meta.url);
 await mkdir(output, { recursive: true });
+// A failed rerun must never leave a previous run's successful report in place.
+for (const artifact of [
+  "report.json",
+  "summary.json",
+  "k6.log",
+  "pods.json",
+  "error.txt",
+])
+  await rm(new URL(artifact, output), { force: true });
 process.on("uncaughtException", (error) => {
   void writeFile(new URL("error.txt", output), error.stack ?? String(error)).finally(
     () => {
