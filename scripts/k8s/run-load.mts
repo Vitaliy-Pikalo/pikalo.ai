@@ -4,6 +4,7 @@ import { execFileSync } from "node:child_process";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
+import { createHash } from "node:crypto";
 
 const { values } = parseArgs({
   options: {
@@ -36,6 +37,24 @@ const kubectl = (args: string[], input?: unknown) =>
   }).trim();
 const output = new URL(`../../work/load/${label}/`, import.meta.url);
 await mkdir(output, { recursive: true });
+process.on("uncaughtException", (error) => {
+  void writeFile(new URL("error.txt", output), error.stack ?? String(error)).finally(
+    () => {
+      console.error(error);
+      process.exit(1);
+    },
+  );
+});
+const readJson = (args: string[]) => {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return JSON.parse(kubectl(args));
+    } catch (error) {
+      if (attempt >= 2) throw error;
+      console.error(`Retrying Kubernetes observation: ${String(error)}`);
+    }
+  }
+};
 const environment = {
   kubernetes: JSON.parse(kubectl(["version", "-o", "json"])).serverVersion.gitVersion,
   node: kubectl(["exec", "deployment/answer-api", "--", "node", "--version"]),
@@ -74,10 +93,8 @@ const fixture = JSON.parse(
 );
 assert.equal(fixture.spec.template.spec.containers[0].image, "pikalo-load:local");
 const observe = () => {
-  const hpa = JSON.parse(kubectl(["get", "hpa", "answer-api", "-o", "json"]));
-  const pods = JSON.parse(
-    kubectl(["get", "pods", "-l", "app=answer-api", "-o", "json"]),
-  ).items;
+  const hpa = readJson(["get", "hpa", "answer-api", "-o", "json"]);
+  const pods = readJson(["get", "pods", "-l", "app=answer-api", "-o", "json"]).items;
   return {
     at: new Date().toISOString(),
     active: pods.filter(
@@ -94,7 +111,7 @@ const observe = () => {
     ).length,
     desired: hpa.status?.desiredReplicas ?? 0,
     cpuUtilizationPercent:
-      hpa.status?.currentMetrics?.[0]?.resource?.current.averageUtilization ?? null,
+      hpa.status?.currentMetrics?.[0]?.resource?.current?.averageUtilization ?? null,
   };
 };
 const idleDeadline = Date.now() + 300_000;
@@ -179,8 +196,12 @@ let result: string | undefined;
 while (Date.now() < deadline) {
   const snapshot = observe();
   observations.push(snapshot);
+  await writeFile(
+    new URL("pods.json", output),
+    JSON.stringify(observations, null, 2) + "\n",
+  );
   console.log(JSON.stringify(snapshot));
-  const job = JSON.parse(kubectl(["get", "job", name, "-o", "json"]));
+  const job = readJson(["get", "job", name, "-o", "json"]);
   const terminal = job.status?.conditions?.find(
     (c: { type: string; status: string }) =>
       c.status === "True" && ["Complete", "Failed"].includes(c.type),
@@ -219,6 +240,8 @@ const report = {
   cpuRequest: "100m",
   hpaTarget: "60%",
   hpaMaxReplicas: 3,
+  connectionReuse: false,
+  scriptSha256: createHash("sha256").update(script).digest("hex"),
   environment,
 };
 await writeFile(new URL("report.json", output), JSON.stringify(report, null, 2) + "\n");

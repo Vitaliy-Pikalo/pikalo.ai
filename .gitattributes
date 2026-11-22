@@ -1,2 +1,4 @@
 # Keep the vendored release manifest's checksum stable on Windows checkouts.
 k8s/metrics-server/upstream/components.yaml text eol=lf
+# Preserve the benchmark script hash across Windows and Linux checkouts.
+load/ask.js text eol=lf

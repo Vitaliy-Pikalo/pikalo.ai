@@ -51,7 +51,8 @@ Pod. The HPA target remains 60% of a 100m CPU request, with limits of 1–3 answ
 replicas. Calculator and fixture backends each have one replica.
 
 The generator targets Service DNS inside the cluster, not a port-forward pinned
-to one Pod. It shares the local Docker VM with the tested services. The test
+to one Pod. Connection reuse is disabled so new connections can reach newly
+scaled replicas through the layer-4 Service. It shares the local Docker VM with the tested services. The test
 includes HPA scale-up time rather than reporting only a pre-scaled steady state.
 The verifier samples desired, active and Ready answer Pod counts every five
 seconds and records the observed maxima; it does not invent or force a peak.

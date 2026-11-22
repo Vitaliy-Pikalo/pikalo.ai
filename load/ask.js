@@ -18,6 +18,7 @@ if (
   throw new Error("Local test requires RATE 1..100 and SECONDS 10..600");
 }
 export const options = {
+  noConnectionReuse: true,
   scenarios: {
     local_fixture: {
       executor: "constant-arrival-rate",
