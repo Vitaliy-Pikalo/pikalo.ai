@@ -1,9 +1,12 @@
-import { createAskHandler } from "@/lib/assistant/api";
+import { createAskHandler, type AskHandlerDeps } from "@/lib/assistant/api";
 import { ask, type AskDeps } from "@/lib/assistant/ask";
 import type { Handler } from "@/services/http";
 
-export function createAnswerHandler(deps: AskDeps): Handler {
-  const answer = createAskHandler({ run: (question) => ask(question, deps) });
+export function createAnswerHandler(
+  deps: AskDeps,
+  options: Pick<AskHandlerDeps, "localLimitPerMinute"> = {},
+): Handler {
+  const answer = createAskHandler({ ...options, run: (question) => ask(question, deps) });
   return async (request) => {
     const path = new URL(request.url).pathname;
     if (path === "/healthz" && request.method === "GET")

@@ -1,0 +1,66 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fixture-backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: fixture-backend
+  template:
+    metadata:
+      labels:
+        app: fixture-backend
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+      containers:
+        - name: fixture-backend
+          image: pikalo-load:local
+          imagePullPolicy: Never
+          command: [node, --import, tsx, load/fixture-server.mts]
+          env:
+            - name: PORT
+              value: "3002"
+          ports:
+            - name: http
+              containerPort: 3002
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 5
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: "1"
+              memory: 512Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: fixture-backend
+spec:
+  selector:
+    app: fixture-backend
+  ports:
+    - name: http
+      port: 3002
+      targetPort: http

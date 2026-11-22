@@ -1,8 +1,9 @@
-param([switch]$IncludeEvals)
+param([switch]$IncludeEvals, [switch]$IncludeLoad)
 . (Join-Path $PSScriptRoot 'common.ps1')
 Invoke-LocalKubectl get nodes
 $images = @('pikalo-answer-api:local', 'pikalo-mcp-calc:local')
 if ($IncludeEvals) { $images += 'pikalo-evals:local' }
+if ($IncludeLoad) { $images += 'pikalo-load:local' }
 foreach ($image in $images) {
     & kind load docker-image $image --name $ClusterName
     if ($LASTEXITCODE -ne 0) {
